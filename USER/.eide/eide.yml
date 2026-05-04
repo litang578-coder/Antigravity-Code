@@ -1,0 +1,243 @@
+version: "4.1"
+name: main
+type: ARM
+deviceName: null
+packDir: .pack/Keil/STM32F1xx_DFP.2.3.0
+srcDirs: []
+virtualFolder:
+  name: <virtual_root>
+  files: []
+  folders:
+    - name: user
+      files:
+        - path: main.c
+        - path: stm32f10x_it.c
+        - path: system_stm32f10x.c
+      folders: []
+    - name: fwlib
+      files:
+        - path: ../FWLIB/src/misc.c
+        - path: ../FWLIB/src/stm32f10x_adc.c
+        - path: ../FWLIB/src/stm32f10x_bkp.c
+        - path: ../FWLIB/src/stm32f10x_can.c
+        - path: ../FWLIB/src/stm32f10x_cec.c
+        - path: ../FWLIB/src/stm32f10x_crc.c
+        - path: ../FWLIB/src/stm32f10x_dac.c
+        - path: ../FWLIB/src/stm32f10x_dbgmcu.c
+        - path: ../FWLIB/src/stm32f10x_dma.c
+        - path: ../FWLIB/src/stm32f10x_exti.c
+        - path: ../FWLIB/src/stm32f10x_flash.c
+        - path: ../FWLIB/src/stm32f10x_fsmc.c
+        - path: ../FWLIB/src/stm32f10x_gpio.c
+        - path: ../FWLIB/src/stm32f10x_i2c.c
+        - path: ../FWLIB/src/stm32f10x_iwdg.c
+        - path: ../FWLIB/src/stm32f10x_pwr.c
+        - path: ../FWLIB/src/stm32f10x_rcc.c
+        - path: ../FWLIB/src/stm32f10x_rtc.c
+        - path: ../FWLIB/src/stm32f10x_sdio.c
+        - path: ../FWLIB/src/stm32f10x_spi.c
+        - path: ../FWLIB/src/stm32f10x_tim.c
+        - path: ../FWLIB/src/stm32f10x_usart.c
+        - path: ../FWLIB/src/stm32f10x_wwdg.c
+      folders: []
+    - name: core
+      files:
+        - path: ../CORE/core_cm3.c
+        - path: ../CORE/startup_stm32f10x_md.s
+      folders: []
+    - name: system
+      files:
+        - path: ../SYSTEM/delay/delay.c
+        - path: ../SYSTEM/sys/sys.c
+        - path: ../SYSTEM/usart/usart.c
+        - path: ../SYSTEM/usart/usart.h
+      folders: []
+    - name: hardware
+      files:
+        - path: ../HARDWAR/OLED.C
+        - path: ../HARDWAR/IO_Init.c
+        - path: ../HARDWAR/ds18b20.c
+        - path: ../HARDWAR/ina226.c
+        - path: ../HARDWAR/timer.c
+        - path: ../HARDWAR/bsp_adc.c
+        - path: ../HARDWAR/modbus.c
+        - path: ../HARDWAR/mppt.c
+        - path: ../HARDWAR/mppt.h
+        - path: ../HARDWAR/pwm.c
+        - path: ../HARDWAR/pwm.h
+        - path: ../HARDWAR/ina3221.c
+        - path: ../HARDWAR/ina3221.h
+      folders: []
+    - name: Net_device
+      files:
+        - path: ../NET/net_device/src/esp8266.c
+        - path: ../NET/net_device/inc/esp8266.h
+      folders: []
+    - name: OneNet
+      files:
+        - path: ../NET/onenet/src/base64.c
+        - path: ../NET/onenet/src/hmac_sha1.c
+        - path: ../NET/onenet/src/onenet.c
+      folders: []
+    - name: Net_protocol
+      files:
+        - path: ../NET/MQTT/MqttKit.c
+      folders: []
+    - name: CJSON
+      files:
+        - path: ../NET/CJSON/cJSON.c
+      folders: []
+dependenceList: []
+outDir: build
+miscInfo:
+  uid: 65e5dea25dea4e2ff3e4717a86bba5b5
+targets:
+  finger:
+    cppPreprocessAttrs:
+      defineList:
+        - STM32F10X_MD
+        - USE_STDPERIPH_DRIVER
+      incList:
+        - .
+        - ../SYSTEM/sys
+        - ../SYSTEM/delay
+        - ../SYSTEM/usart
+        - ../FWLIB/inc
+        - ../CORE
+        - ../HARDWAR
+        - ../HARDWAR/ONENET
+        - ../NET
+        - ../NET/CJSON
+        - ../NET/MQTT
+        - ../NET/net_device/inc
+        - ../NET/onenet/inc
+        - .cmsis/include
+        - RTE/_finger
+      libList: []
+    excludeList: []
+    settings: {}
+    toolchain: AC5
+    toolchainConfigMap:
+      AC5:
+        archExtensions: ""
+        cpuType: Cortex-M3
+        floatingPointHardware: none
+        options:
+          version: 4
+          afterBuildTasks: []
+          asm-compiler:
+            defines: []
+          beforeBuildTasks: []
+          c/cpp-compiler:
+            CXX_FLAGS: --diag_suppress=1 --diag_suppress=1295
+            C_FLAGS: --diag_suppress=1 --diag_suppress=1295
+            c99-mode: true
+            one-elf-section-per-function: true
+            optimization: level-0
+            warnings: all-warnings
+          global:
+            output-debug-info: enable
+            use-microLIB: true
+          linker:
+            $outputTaskExcludes:
+              - .bin
+            output-format: elf
+            ro-base: "0x08000000"
+            rw-base: "0x20000000"
+            xo-base: ""
+        scatterFilePath: ""
+        storageLayout:
+          RAM:
+            - id: 1
+              isChecked: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              noInit: false
+              tag: RAM
+            - id: 2
+              isChecked: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              noInit: false
+              tag: RAM
+            - id: 3
+              isChecked: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              noInit: false
+              tag: RAM
+            - id: 1
+              isChecked: true
+              mem:
+                size: "0x5000"
+                startAddr: "0x20000000"
+              noInit: false
+              tag: IRAM
+            - id: 2
+              isChecked: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              noInit: false
+              tag: IRAM
+          ROM:
+            - id: 1
+              isChecked: false
+              isStartup: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              tag: ROM
+            - id: 2
+              isChecked: false
+              isStartup: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              tag: ROM
+            - id: 3
+              isChecked: false
+              isStartup: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              tag: ROM
+            - id: 1
+              isChecked: true
+              isStartup: true
+              mem:
+                size: "0x10000"
+                startAddr: "0x8000000"
+              tag: IROM
+            - id: 2
+              isChecked: false
+              isStartup: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              tag: IROM
+        useCustomScatterFile: true
+    uploadConfigMap:
+      JLink:
+        baseAddr: ""
+        bin: ""
+        cpuInfo:
+          cpuName: "null"
+          vendor: "null"
+        otherCmds: ""
+        proType: 1
+        speed: 8000
+      STLink:
+        address: "0x08000000"
+        bin: ""
+        elFile: None
+        optionBytes: .eide/finger.st.option.bytes.ini
+        otherCmds: ""
+        proType: SWD
+        resetMode: default
+        runAfterProgram: true
+        speed: 4000
+    uploader: STLink

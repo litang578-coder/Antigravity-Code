@@ -1,0 +1,77 @@
+<html>
+<body>
+<pre>
+<h1>礦ision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: μVision V5.24.2.0
+Copyright (C) 2017 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: 1 8618269518350, 1, LIC=MPPLD-8E1QR-45XT5-GA9WH-4HUEH-CG884
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Plus  Version: 5.24.1
+Toolchain Path:  D:\keil5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 5 (build 528)
+Assembler:       Armasm.exe V5.06 update 5 (build 528)
+Linker/Locator:  ArmLink.exe V5.06 update 5 (build 528)
+Library Manager: ArmAr.exe V5.06 update 5 (build 528)
+Hex Converter:   FromElf.exe V5.06 update 5 (build 528)
+CPU DLL:         SARMCM3.DLL V5.24.1
+Dialog DLL:      DCM.DLL V1.16.0.0
+Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.0.1.0
+Dialog DLL:      TCM.DLL V1.32.0.0
+ 
+<h2>Project:</h2>
+C:\Users\86182\Desktop\毕业设计\代码\代码（88元）\代码\USER\main.uvprojx
+Project File Date:  04/19/2026
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 5 (build 528)', folder: 'D:\keil5\ARM\ARMCC\Bin'
+Build target 'finger'
+compiling main.c...
+compiling onenet.c...
+..\NET\onenet\src\onenet.c(550): warning:  #177-D: variable "data_ptr"  was declared but never referenced
+  				char *data_ptr = NULL;
+..\NET\onenet\src\onenet.c(535): warning:  #177-D: variable "dataPtr"  was declared but never referenced
+  	char *dataPtr = NULL;
+..\NET\onenet\src\onenet.c(536): warning:  #177-D: variable "numBuf"  was declared but never referenced
+  	char numBuf[10];
+..\NET\onenet\src\onenet.c(537): warning:  #177-D: variable "num"  was declared but never referenced
+  	int num = 0;
+..\NET\onenet\src\onenet.c(539): warning:  #177-D: variable "params_json"  was declared but never referenced
+  	cJSON *raw_json, *params_json, *speed_json, *control_json,
+..\NET\onenet\src\onenet.c(539): warning:  #177-D: variable "speed_json"  was declared but never referenced
+  	cJSON *raw_json, *params_json, *speed_json, *control_json,
+..\NET\onenet\src\onenet.c(539): warning:  #177-D: variable "control_json"  was declared but never referenced
+  	cJSON *raw_json, *params_json, *speed_json, *control_json,
+..\NET\onenet\src\onenet.c(540): warning:  #177-D: variable "braces_down_json"  was declared but never referenced
+  	*	braces_down_json,*braces_up_json;
+..\NET\onenet\src\onenet.c(540): warning:  #177-D: variable "braces_up_json"  was declared but never referenced
+  	*	braces_down_json,*braces_up_json;
+..\NET\onenet\src\onenet.c: 9 warnings, 0 errors
+linking...
+..\OBJ\main.axf: Error: L6218E: Undefined symbol current (referred from onenet.o).
+..\OBJ\main.axf: Error: L6218E: Undefined symbol temp (referred from onenet.o).
+..\OBJ\main.axf: Error: L6218E: Undefined symbol volt (referred from onenet.o).
+..\OBJ\main.axf: Error: L6218E: Undefined symbol main (referred from entry9a.o).
+Not enough information to list image symbols.
+Not enough information to list load addresses in the image map.
+Finished: 2 information, 0 warning and 4 error messages.
+"..\OBJ\main.axf" - 4 Error(s), 9 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: Keil
+                http://www.keil.com/pack/Keil.STM32F1xx_DFP.2.2.0.pack
+                Keil.STM32F1xx_DFP.2.2.0
+                STMicroelectronics STM32F1 Series Device Support, Drivers and Examples
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_finger
+  D:\keil5\ARM\PACK\Keil\STM32F1xx_DFP\2.2.0\Device\Include
+
+<h2>Collection of Component Files used:</h2>
+Target not created.
+Build Time Elapsed:  00:00:02
+</pre>
+</body>
+</html>
