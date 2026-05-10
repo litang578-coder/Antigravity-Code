@@ -12,7 +12,7 @@
 	*
 	*	˵���� 		��onenetƽ̨�����ݽ����ӿڲ�
 	*
-	*	�޸ļ�¼��	V1.0��Э���װ�������ж϶���ͬһ���ļ������Ҳ�ͬЭ��ӿڲ�ͬ��
+	*	�޸ļ�¼��	V1.0��Э���װ�������ж϶����һ���ļ������Ҳ�ͬЭ��ӿڲ����
 	*				V1.1���ṩͳһ�ӿڹ�Ӧ�ò�ʹ�ã����ݲ�ͬЭ���ļ�����װЭ����ص����ݡ�?
 	************************************************************
 	************************************************************
@@ -392,8 +392,8 @@ unsigned char OneNet_FillBuf(char *buf)
 	// ʾ��: {"id":"123","params":{"temp":{"value":24.5},"volt":{"value":3.70},"current":{"value":0.123}}}
 	// ���̵���״̬Ҳ�ϱ��� OneNet��0 �� 1��
 	/* �ϱ���ʽ������Relay ʹ�ò������ͣ���ʶ����Ϊ botton1 */
-	int n = snprintf(buf, 256, "{\"id\":\"123\",\"params\":{\"temp\":{\"value\":%.1f},\"volt\":{\"value\":%.2f},\"current\":{\"value\":%.3f},\"botton1\":{\"value\":%s},\"battery_soc\":{\"value\":%d}}}",
-					 temp, volt, current, (Relay ? "true" : "false"), (int)g_battery_soc_upload);
+	int n = snprintf(buf, 256, "{\"id\":\"123\",\"params\":{\"temp\":{\"value\":%.1f},\"volt\":{\"value\":%.2f},\"current\":{\"value\":%.3f},\"botton1\":{\"value\":%s},\"battery_soc\":{\"value\":%d},\"Relay_BAT\":{\"value\":%s}}}",
+					 temp, volt, current, (Relay ? "true" : "false"), (int)g_battery_soc_upload, (Relay_BAT ? "true" : "false"));
 
 	if(n < 0)
 		return 0;

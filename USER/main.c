@@ -21,6 +21,12 @@ uint8_t menu_state = 0;           // 菜单状态机: 0=主菜单, 1=详情菜�
 #include "modbus.h"
 #include "onenet.h"
 #define ESP8266_ONENET_INFO "AT+CIPSTART=\"TCP\",\"mqtts.heclouds.com\",1883\r\n"
+#define BATTERY_COUNT 2
+#define BAT_FULL_VOLTAGE 4.18f
+#define BAT_FULL_CURRENT_A 0.10f
+#define BAT_FULL_CONFIRM_COUNT 10
+#define BAT_SWITCH_SETTLE_COUNT 20
+#define BAT_MANUAL_PAUSE_COUNT 300
 u8 key_main, alarm_flag;
 float volt;
 float current;
@@ -32,6 +38,98 @@ u8 onenet_send_ticks = 0;
 u8 ds18b20_ticks = 0;
 /* 网络接收缓存 */
 unsigned char *dataPtr = NULL;
+
+static u8 battery_full[BATTERY_COUNT] = {0};
+static u8 battery_full_confirm_cnt = 0;
+static u16 battery_switch_settle_ticks = BAT_SWITCH_SETTLE_COUNT;
+static u16 battery_manual_pause_ticks = 0;
+
+static u8 Battery_GetActiveIndex(void)
+{
+    return Relay_BAT ? 1 : 0;
+}
+
+static void Battery_Select(u8 battery_id)
+{
+    if (battery_id >= BATTERY_COUNT)
+        battery_id = 0;
+
+    Relay_BAT = battery_id ? 1 : 0;
+    INA3221_SetActiveBattery(battery_id);
+    battery_full_confirm_cnt = 0;
+    battery_switch_settle_ticks = BAT_SWITCH_SETTLE_COUNT;
+}
+
+static void Battery_ManualSwitch(void)
+{
+    u8 next_battery;
+
+    next_battery = Battery_GetActiveIndex() ? 0 : 1;
+    Battery_Select(next_battery);
+    battery_manual_pause_ticks = BAT_MANUAL_PAUSE_COUNT;
+}
+
+static void Battery_AutoChargeProcess(void)
+{
+    u8 active_battery;
+    u8 other_battery;
+
+    active_battery = Battery_GetActiveIndex();
+    other_battery = active_battery ? 0 : 1;
+
+    if (battery_manual_pause_ticks > 0)
+        battery_manual_pause_ticks--;
+
+    if (g_ina3221.ch1_voltage < (BAT_FULL_VOLTAGE - 0.08f))
+        battery_full[active_battery] = 0;
+
+    if (battery_switch_settle_ticks > 0)
+    {
+        battery_switch_settle_ticks--;
+        battery_full_confirm_cnt = 0;
+        return;
+    }
+
+    if (battery_manual_pause_ticks > 0)
+    {
+        battery_full_confirm_cnt = 0;
+        return;
+    }
+
+    if (!Relay)
+    {
+        battery_full_confirm_cnt = 0;
+        return;
+    }
+
+    if ((g_ina3221.ch1_voltage >= BAT_FULL_VOLTAGE) &&
+        (g_ina3221.battery_charge_current <= BAT_FULL_CURRENT_A))
+    {
+        if (battery_full_confirm_cnt < BAT_FULL_CONFIRM_COUNT)
+            battery_full_confirm_cnt++;
+    }
+    else
+    {
+        battery_full_confirm_cnt = 0;
+    }
+
+    if (battery_full_confirm_cnt < BAT_FULL_CONFIRM_COUNT)
+        return;
+
+    battery_full[active_battery] = 1;
+    battery_full_confirm_cnt = 0;
+
+    if (!battery_full[other_battery])
+    {
+        Battery_Select(other_battery);
+        Relay = 1;
+    }
+    else
+    {
+        Relay = 0;
+    }
+}
+
 int main(void) // 主函数
 {
     SystemInit();
@@ -48,6 +146,7 @@ int main(void) // 主函数
     UsartPrintf(USART3, "s");
     TIM2_Int_Init(99, 719);
     INA3221_Init(); // INA3221初始化
+    INA3221_SetActiveBattery(Relay_BAT ? 1 : 0);
     INA226_Init();
     Key_Init();
     Beep_Init();
@@ -93,7 +192,7 @@ int main(void) // 主函数
         // K5 切换电池 (Relay PB9)
         if (Key5_Scan() == 1)
         {
-            Relay_BAT = !Relay_BAT;
+            Battery_ManualSwitch();
         }
         if (Key4_Scan() == 1)
         {
@@ -135,10 +234,19 @@ int main(void) // 主函数
             }
             if (alarm_flag == 1) // 蜂鸣器报警
                 Beep = !Beep;
-            if ((volt > 4.18) && (current < 0.1))
-            { // 停止充电
-                Relay = 0;
-            }
+
+            /* 读取 INA3221 三通道数据 */
+            INA3221_SetActiveBattery(Relay_BAT ? 1 : 0);
+            INA3221_ReadAll();
+            g_battery_soc_upload = g_ina3221.battery_soc; // 更新待上传的SOC
+            Battery_AutoChargeProcess();
+
+            /* 执行 MPPT 算法跟踪 (利用 CH2 作为 PV 输入) */
+            // MPPT_Process();
+
+            /* 原有 INA226 读取 */
+            volt = INA226_GetVoltage(WRITE_ADDR) * 0.00125f;
+            current = INA226_ReadCurrent_A(WRITE_ADDR);
 
             if (Relay)
             {
@@ -154,17 +262,6 @@ int main(void) // 主函数
                 modbus_virtual_register[2] = volt * 100;
                 modbus_virtual_register[3] = current * 1000;
             }
-
-            /* 读取 INA3221 三通道数据 */
-            INA3221_ReadAll();
-            g_battery_soc_upload = g_ina3221.battery_soc; // 更新待上传的SOC
-
-            /* 执行 MPPT 算法跟踪 (利用 CH2 作为 PV 输入) */
-            // MPPT_Process();
-
-            /* 原有 INA226 读取 */
-            volt = INA226_GetVoltage(WRITE_ADDR) * 0.00125f;
-            current = INA226_ReadCurrent_A(WRITE_ADDR);
 
             /* OLED 菜单状态机显示 */
             if (menu_state == 0)

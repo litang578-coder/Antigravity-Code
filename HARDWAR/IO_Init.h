@@ -3,33 +3,33 @@
 #include "sys.h"
 #include "delay.h"
 /****************************
-* LED¶¨Òå
+* LEDå®šä¹‰
 ****************************/
 #define GPIO_RCC_Led 	RCC_APB2Periph_GPIOB
 #define GPIO_Led 			GPIOB
 #define GPIO_Pin_Led  	GPIO_Pin_9
 #define Led  					PBout(9) //
 /***************************
-* ·äÃùÆ÷¶¨Òå
+* èœ‚é¸£å™¨å®šä¹‰
 ****************************/
 #define GPIO_RCC_Beep 	RCC_APB2Periph_GPIOA
 #define GPIO_Beep 			GPIOA
 #define GPIO_Pin_Beep 	GPIO_Pin_8
-#define Beep  				PAout(8) //·äÃùÆ÷
+#define Beep  				PAout(8) //èœ‚é¸£å™¨
 /***************************
-* ·çÉÈ¶¨Òå
+* é£æ‰‡å®šä¹‰
 ****************************/
 #define GPIO_RCC_K5 		RCC_APB2Periph_GPIOB
 #define GPIO_K5 				GPIOB
 #define GPIO_Pin_K5 		GPIO_Pin_11
 #define K5  					PBin(11) //
 /***************************
-* ¼ÌµçÆ÷IO¶¨Òå
+* ç»§ç”µå™¨IOå®šä¹‰
 ****************************/
-#define GPIO_RCC_Relay 	RCC_APB2Periph_GPIOB
-#define GPIO_Relay 			GPIOB
-#define GPIO_Pin_Relay 	GPIO_Pin_9
-#define Relay  				PBout(9) //
+#define GPIO_RCC_Relay 	RCC_APB2Periph_GPIOA
+#define GPIO_Relay 			GPIOA
+#define GPIO_Pin_Relay 	GPIO_Pin_12
+#define Relay  				PAout(12) //
 
 /***************************
 * BAT (B8)
@@ -37,9 +37,9 @@
 #define GPIO_RCC_Relay_BAT 	RCC_APB2Periph_GPIOB
 #define GPIO_Relay_BAT 			GPIOB
 #define GPIO_Pin_Relay_BAT 	GPIO_Pin_8
-#define Relay_BAT  				PBout(8) //BAT¼ÌµçÆ÷1
+#define Relay_BAT  				PBout(8) //BATç»§ç”µå™¨1
 /***************************
-* °´¼üIO¶¨Òå
+* æŒ‰é”®IOå®šä¹‰
 ****************************/
 #define GPIO_RCC_K1 RCC_APB2Periph_GPIOB
 #define GPIO_RCC_K2 RCC_APB2Periph_GPIOB
@@ -50,29 +50,29 @@
 #define GPIO_Pin_K1 GPIO_Pin_13
 #define GPIO_Pin_K2 GPIO_Pin_14
 #define GPIO_Pin_K3 GPIO_Pin_15
-#define K1  			PBin(13) //°´¼ü1¶ÁÈ¡
-#define K2 				PBin(14) //°´¼ü2¶ÁÈ¡
-#define K3  			PBin(15) //°´¼ü3¶ÁÈ¡
+#define K1  			PBin(13) //æŒ‰é”®1è¯»å–
+#define K2 				PBin(14) //æŒ‰é”®2è¯»å–
+#define K3  			PBin(15) //æŒ‰é”®3è¯»å–
 
 /***************************
-* K4°´¼üIO¶¨Òå£¨²Ëµ¥ÇĞ»»¼ü£©
-* Ó²¼ş£ºK4½ÓPB12£¬µÍµçÆ½´¥·¢£¬ÄÚ²¿ÉÏÀ­
+* K4æŒ‰é”®IOå®šä¹‰ï¼ˆèœå•åˆ‡æ¢é”®ï¼‰
+* ç¡¬ä»¶ï¼šK4æ¥PB12ï¼Œä½ç”µå¹³è§¦å‘ï¼Œå†…éƒ¨ä¸Šæ‹‰
 ****************************/
 #define GPIO_RCC_K4 RCC_APB2Periph_GPIOB
 #define GPIO_K4     GPIOB
 #define GPIO_Pin_K4 GPIO_Pin_12
-#define K4          PBin(12)   //°´¼ü4¶ÁÈ¡£¬ÇĞ»»OLEDÏÔÊ¾²Ëµ¥
+#define K4          PBin(12)   //æŒ‰é”®4è¯»å–ï¼Œåˆ‡æ¢OLEDæ˜¾ç¤ºèœå•
 
 /***************************
-* º¯ÊıÉùÃ÷
+* å‡½æ•°å£°æ˜
 ****************************/
-void Key_Init(void);      //°´¼üIO³õÊ¼»¯£¨K1/K2/K3/K4£©
-u8 Key_Scan(void);        //°´¼üÉ¨Ãè£¨K1/K2/K3£©
-u8 Key_long_Scan(void);   //³¤°´É¨Ãè
-u8 Key4_Scan(void);       //K4°´¼üÉ¨Ãè£¨º¬Èí¼şÏû¶¶£©
-void Relay_Init(void);    //¼ÌµçÆ÷³õÊ¼»¯
-void Beep_Init(void);     //·äÃùÆ÷³õÊ¼»¯
-u8 Key5_Scan(void);      //·çÉÈ³õÊ¼»¯
-void Led_Init(void);      //LED³õÊ¼»¯
-void IO_init(void);       //ÆäËûIO³õÊ¼»¯
+void Key_Init(void);      //æŒ‰é”®IOåˆå§‹åŒ–ï¼ˆK1/K2/K3/K4ï¼‰
+u8 Key_Scan(void);        //æŒ‰é”®æ‰«æï¼ˆK1/K2/K3ï¼‰
+u8 Key_long_Scan(void);   //é•¿æŒ‰æ‰«æ
+u8 Key4_Scan(void);       //K4æŒ‰é”®æ‰«æï¼ˆå«è½¯ä»¶æ¶ˆæŠ–ï¼‰
+void Relay_Init(void);    //ç»§ç”µå™¨åˆå§‹åŒ–
+void Beep_Init(void);     //èœ‚é¸£å™¨åˆå§‹åŒ–
+u8 Key5_Scan(void);      //é£æ‰‡åˆå§‹åŒ–
+void Led_Init(void);      //LEDåˆå§‹åŒ–
+void IO_init(void);       //å…¶ä»–IOåˆå§‹åŒ–
 #endif
