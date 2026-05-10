@@ -1,0 +1,47 @@
+$color-accent-blue: #47b8ff;
+$color-accent-blue-strong: #69c7ff;
+$color-accent-green: #4cff95;
+$color-accent-hot: #ff9c3d;
+$color-accent-success: #39ff88;
+$color-battery-high: #10b981;
+$color-battery-medium: #f59e0b;
+$color-battery-low: #ef4444;
+$color-text-primary: #f4fbff;
+$color-text-soft: rgba(191, 216, 255, 0.72);
+$color-text-muted: rgba(173, 197, 230, 0.5);
+$color-text-placeholder: rgba(206, 216, 232, 0.72);
+$color-panel-bg: rgba(8, 18, 36, 0.55);
+$color-glass-bg: rgba(255, 255, 255, 0.08);
+$color-glass-bg-active: rgba(255, 255, 255, 0.12);
+$color-glass-border: rgba(193, 228, 255, 0.15);
+$radius-card: 30rpx;
+$space-sm: 10rpx;
+$space-md: 18rpx;
+$space-lg: 24rpx;
+$space-xl: 28rpx;
+$card-padding: 30rpx 28rpx;
+
+@mixin glass-card($padding: $card-padding) {
+  padding: $padding;
+  border-radius: $radius-card;
+  background: $color-glass-bg;
+  border: 1rpx solid $color-glass-border;
+  backdrop-filter: blur(26rpx);
+  box-shadow:
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.08),
+    0 18rpx 50rpx rgba(1, 10, 26, 0.35);
+}
+
+@mixin data-card-shell {
+  min-height: 240rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  @include glass-card;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+
+  &:active {
+    transform: scale(0.98);
+    background: $color-glass-bg-active;
+  }
+}
