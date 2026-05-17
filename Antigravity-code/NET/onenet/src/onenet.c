@@ -493,14 +493,16 @@ void OneNET_Subscribe(void)
 	
 	MQTT_PACKET_STRUCTURE mqtt_packet = {NULL, 0, 0, 0};						//Э���?
 	
-	char topic_buf[56];
-	const char *topic = topic_buf;
-	
-	snprintf(topic_buf, sizeof(topic_buf), "$sys/%s/%s/thing/property/set", PROID, DEVICE_NAME);
-	
-	UsartPrintf(USART_DEBUG, "Subscribe Topic: %s\r\n", topic_buf);
-	
-	if(MQTT_PacketSubscribe(MQTT_SUBSCRIBE_ID, MQTT_QOS_LEVEL0, &topic, 1, &mqtt_packet) == 0)
+	char topic_buf[2][80];
+	const char *topics[] = {topic_buf[0], topic_buf[1]};
+
+	snprintf(topic_buf[0], sizeof(topic_buf[0]), "$sys/%s/%s/thing/property/set", PROID, DEVICE_NAME);
+	snprintf(topic_buf[1], sizeof(topic_buf[1]), "$sys/%s/%s/thing/property/post/reply", PROID, DEVICE_NAME);
+
+	UsartPrintf(USART_DEBUG, "Subscribe Topic: %s\r\n", topic_buf[0]);
+	UsartPrintf(USART_DEBUG, "Subscribe Topic: %s\r\n", topic_buf[1]);
+
+	if(MQTT_PacketSubscribe(MQTT_SUBSCRIBE_ID, MQTT_QOS_LEVEL0, topics, 2, &mqtt_packet) == 0)
 	{
 		ESP8266_SendData(mqtt_packet._data, mqtt_packet._len);					//��ƽ̨���Ͷ�������
 		
@@ -584,6 +586,8 @@ void OneNet_RevPro(unsigned char *cmd)
 			}
 
 			
+		break;
+
 		case MQTT_PKT_PUBACK:														//����Publish��Ϣ��ƽ̨�ظ���Ack
 		
 			if(MQTT_UnPacketPublishAck(cmd) == 0)

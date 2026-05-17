@@ -76,6 +76,12 @@ import VoltageChartCard from './components/VoltageChartCard.vue'
 
 const { createCommonToken } = require('@/key.js')
 
+const POLL_FAST_DELAY = 700
+const POLL_RETRY_DELAYS = [800, 1500, 3000, 5000]
+const REQUEST_TIMEOUT = 3000
+const CHARGING_CONFIRM_REFRESH_DELAY = 250
+const CHARGING_CONFIRM_TIMEOUT = 2200
+
 export default {
   components: {
     DashboardStatus,
@@ -101,6 +107,11 @@ export default {
       // 动画相关
       animationId: null,
       timer: null,
+      pollingActive: false,
+      isFetchingDevData: false,
+      fetchRequestTask: null,
+      pollFailCount: 0,
+      pendingImmediatePoll: false,
       dataTimeout: null,
       hasReceivedData: false,
       isDataConnected: false,
@@ -108,6 +119,7 @@ export default {
       isCharging: false, // Boolean: 太阳能充电开关状态
       isBatteryChargingUp: false,
       isChargingLoading: false,
+      pendingChargingState: null,
       chargingToggleTimer: null,
       relayToggleTimer: null,
       voltageHistory: []
@@ -135,9 +147,7 @@ export default {
   onShow() {
     this.startSmoothing()
     this.startRelayMock()
-    this.fetchDevData()
-    if (this.timer) clearInterval(this.timer)
-    this.timer = setInterval(() => this.fetchDevData(), 1500)
+    this.startPolling()
   },
   onHide() {
     this.stopPageTasks()
@@ -146,6 +156,68 @@ export default {
     this.stopPageTasks()
   },
   methods: {
+    startPolling() {
+      this.pollingActive = true
+      this.pollFailCount = 0
+      this.scheduleNextPoll(0)
+    },
+    stopPolling() {
+      this.pollingActive = false
+
+      if (this.timer) {
+        clearTimeout(this.timer)
+        this.timer = null
+      }
+
+      if (this.fetchRequestTask && typeof this.fetchRequestTask.abort === 'function') {
+        this.fetchRequestTask.abort()
+      }
+
+      this.fetchRequestTask = null
+      this.isFetchingDevData = false
+      this.pendingImmediatePoll = false
+    },
+    scheduleNextPoll(delay = POLL_FAST_DELAY) {
+      if (!this.pollingActive) return
+
+      if (this.timer) {
+        clearTimeout(this.timer)
+      }
+
+      this.timer = setTimeout(() => {
+        this.timer = null
+        this.fetchDevData()
+      }, delay)
+    },
+    getNextPollDelay() {
+      if (this.pollFailCount <= 0) return POLL_FAST_DELAY
+
+      const retryIndex = Math.min(this.pollFailCount - 1, POLL_RETRY_DELAYS.length - 1)
+      return POLL_RETRY_DELAYS[retryIndex]
+    },
+    finishFetchDevData(success) {
+      this.isFetchingDevData = false
+      this.fetchRequestTask = null
+      this.pollFailCount = success ? 0 : this.pollFailCount + 1
+
+      if (this.pendingImmediatePoll) {
+        this.pendingImmediatePoll = false
+        this.scheduleNextPoll(0)
+        return
+      }
+
+      this.scheduleNextPoll(this.getNextPollDelay())
+    },
+    requestImmediatePoll(delay = 0) {
+      if (!this.pollingActive) return
+
+      if (this.isFetchingDevData) {
+        this.pendingImmediatePoll = true
+        return
+      }
+
+      this.scheduleNextPoll(delay)
+    },
     // 低通滤波平滑算法逻辑
     startSmoothing() {
       if (this.animationId) return
@@ -167,10 +239,7 @@ export default {
       this.animationId = requestAnimationFrame(step)
     },
     stopPageTasks() {
-      if (this.timer) {
-        clearInterval(this.timer)
-        this.timer = null
-      }
+      this.stopPolling()
 
       if (this.dataTimeout) {
         clearTimeout(this.dataTimeout)
@@ -186,6 +255,8 @@ export default {
         clearTimeout(this.chargingToggleTimer)
         this.chargingToggleTimer = null
       }
+
+      this.pendingChargingState = null
 
       if (this.relayToggleTimer) {
         clearInterval(this.relayToggleTimer)
@@ -238,6 +309,42 @@ export default {
       }
       return false
     },
+    startChargingConfirmation(nextChargingState) {
+      this.pendingChargingState = nextChargingState
+
+      if (this.chargingToggleTimer) {
+        clearTimeout(this.chargingToggleTimer)
+      }
+
+      this.chargingToggleTimer = setTimeout(() => {
+        this.chargingToggleTimer = null
+        this.pendingChargingState = null
+        this.isChargingLoading = false
+        this.requestImmediatePoll(0)
+      }, CHARGING_CONFIRM_TIMEOUT)
+    },
+    clearChargingConfirmation() {
+      if (this.chargingToggleTimer) {
+        clearTimeout(this.chargingToggleTimer)
+        this.chargingToggleTimer = null
+      }
+
+      this.pendingChargingState = null
+      this.isChargingLoading = false
+    },
+    handleChargingStateFromCloud(value) {
+      const nextCharging = this.normalizeBooleanValue(value)
+
+      if (this.isChargingLoading && this.pendingChargingState !== null) {
+        if (nextCharging === this.pendingChargingState) {
+          this.isCharging = nextCharging
+          this.clearChargingConfirmation()
+        }
+        return
+      }
+
+      this.isCharging = nextCharging
+    },
     handleToggleCharging(nextChargingState) {
       const previousChargingState = this.isCharging
 
@@ -246,18 +353,12 @@ export default {
       uni.vibrateShort()
       console.log(`下发指令: ${JSON.stringify({ botton1: this.isCharging })}`)
 
-      if (this.chargingToggleTimer) {
-        clearTimeout(this.chargingToggleTimer)
-      }
-
-      this.chargingToggleTimer = setTimeout(() => {
-        this.isChargingLoading = false
-        this.chargingToggleTimer = null
-      }, 320)
+      this.startChargingConfirmation(nextChargingState)
 
       uni.request({
         url: 'https://iot-api.heclouds.com/thingmodel/set-device-property',
         method: 'POST',
+        timeout: REQUEST_TIMEOUT,
         data: {
           product_id: 'dtk3h50J6V',
           device_name: 'dachuang',
@@ -266,7 +367,11 @@ export default {
           }
         },
         header: { authorization: this.token },
+        success: () => {
+          this.requestImmediatePoll(CHARGING_CONFIRM_REFRESH_DELAY)
+        },
         fail: () => {
+          this.clearChargingConfirmation()
           this.isCharging = previousChargingState
           uni.showToast({
             title: '控制下发失败',
@@ -280,29 +385,41 @@ export default {
 
       if (Number.isNaN(point)) return
 
-      this.voltageHistory.push(point)
-      if (this.voltageHistory.length > 30) {
-        this.voltageHistory.shift()
-      }
+      this.voltageHistory = this.voltageHistory.concat(point).slice(-30)
+    },
+    buildDevicePropertyMap(dataList) {
+      return dataList.reduce((propertyMap, item) => {
+        if (item && item.identifier) {
+          propertyMap[item.identifier] = item.value
+        }
+        return propertyMap
+      }, Object.create(null))
     },
     fetchDevData() {
-      uni.request({
+      if (!this.pollingActive || this.isFetchingDevData) return
+
+      this.isFetchingDevData = true
+      let requestSucceeded = false
+
+      this.fetchRequestTask = uni.request({
         url: 'https://iot-api.heclouds.com/thingmodel/query-device-property',
         method: 'GET',
+        timeout: REQUEST_TIMEOUT,
         data: {
           product_id: 'dtk3h50J6V',
           device_name: 'dachuang'
         },
         header: { authorization: this.token },
         success: (res) => {
-          const dataList = res.data.data
+          const dataList = res && res.data && res.data.data
           if (!dataList || !Array.isArray(dataList)) return
 
+          requestSucceeded = true
           this.markDataReceived()
 
+          const dataMap = this.buildDevicePropertyMap(dataList)
           const getVal = (id) => {
-            const item = dataList.find((i) => i.identifier === id)
-            return item ? item.value : null
+            return Object.prototype.hasOwnProperty.call(dataMap, id) ? dataMap[id] : null
           }
 
           // 只更新目标值，平滑逻辑会自动跟进
@@ -336,14 +453,18 @@ export default {
           }
 
           const botton1Val = getVal('botton1')
-          if (botton1Val !== null && !this.isChargingLoading) {
-            this.isCharging = this.normalizeBooleanValue(botton1Val)
+          if (botton1Val !== null) {
+            this.handleChargingStateFromCloud(botton1Val)
           }
 
           const relayBatVal = getVal('Relay_BAT')
           if (relayBatVal !== null) {
             this.Relay_BAT = this.normalizeBooleanValue(relayBatVal)
           }
+        },
+        complete: () => {
+          if (!this.pollingActive) return
+          this.finishFetchDevData(requestSucceeded)
         }
       })
     }

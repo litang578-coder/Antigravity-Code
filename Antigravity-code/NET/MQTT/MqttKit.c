@@ -466,7 +466,7 @@ uint1 MQTT_PacketSaveData(const int8 *pro_id, const char *dev_name,
 	
 	snprintf(topic_buf, sizeof(topic_buf),"$sys/%s/%s/thing/property/post", pro_id, dev_name);
 	
-	if(MQTT_PacketPublish(MQTT_PUBLISH_ID, topic_buf, NULL, send_len + 0, MQTT_QOS_LEVEL1, 0, 1, mqttPacket) == 0)
+	if(MQTT_PacketPublish(MQTT_PUBLISH_ID, topic_buf, NULL, send_len + 0, MQTT_QOS_LEVEL0, 0, 1, mqttPacket) == 0)
 	{
 //		mqttPacket->_data[mqttPacket->_len++] = type;					//¿‡–Õ
 //		

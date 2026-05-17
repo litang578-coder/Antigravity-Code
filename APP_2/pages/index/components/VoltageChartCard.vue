@@ -22,6 +22,8 @@
 </template>
 
 <script>
+const CHART_DRAW_THROTTLE_DELAY = 300
+
 export default {
   name: 'VoltageChartCard',
   props: {
@@ -44,6 +46,8 @@ export default {
       chartContext: null,
       chartWidth: 0,
       chartHeight: 0,
+      drawTimer: null,
+      lastDrawAt: 0,
       initTimer: null
     }
   },
@@ -55,11 +59,8 @@ export default {
     }
   },
   watch: {
-    voltageHistory: {
-      deep: true,
-      handler() {
-        this.$nextTick(() => this.drawChart())
-      }
+    voltageHistory() {
+      this.$nextTick(() => this.scheduleDraw())
     }
   },
   mounted() {
@@ -73,9 +74,35 @@ export default {
       clearTimeout(this.initTimer)
       this.initTimer = null
     }
+    if (this.drawTimer) {
+      clearTimeout(this.drawTimer)
+      this.drawTimer = null
+    }
     this.destroyChart()
   },
   methods: {
+    scheduleDraw() {
+      if (!this.chartContext || !this.chartNode || !this.chartWidth || !this.chartHeight) return
+
+      const now = Date.now()
+      const elapsed = now - this.lastDrawAt
+
+      if (elapsed >= CHART_DRAW_THROTTLE_DELAY) {
+        if (this.drawTimer) {
+          clearTimeout(this.drawTimer)
+          this.drawTimer = null
+        }
+        this.drawChart()
+        return
+      }
+
+      if (this.drawTimer) return
+
+      this.drawTimer = setTimeout(() => {
+        this.drawTimer = null
+        this.drawChart()
+      }, Math.max(CHART_DRAW_THROTTLE_DELAY - elapsed, 0))
+    },
     initChart() {
       const query = uni.createSelectorQuery().in(this)
       query
@@ -116,9 +143,11 @@ export default {
       this.chartContext = null
       this.chartWidth = 0
       this.chartHeight = 0
+      this.lastDrawAt = 0
     },
     drawChart() {
       if (!this.chartContext || !this.chartNode || !this.chartWidth || !this.chartHeight) return
+      this.lastDrawAt = Date.now()
 
       const ctx = this.chartContext
       const width = this.chartWidth
