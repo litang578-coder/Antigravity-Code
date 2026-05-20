@@ -36,6 +36,7 @@ void MPPT_Init(void)
     // 3. 环境变量初始化
     g_mppt.Irradiance = 1000.0f; /* 默认 1000W/m2 */
     g_mppt.Temp_Air = 25.0f;
+    g_mppt.efficiency = 0.0f;
 }
 
 /* 

@@ -34,6 +34,7 @@ typedef struct {
     float32  Isc_comp;     /* 修正后的短路电流 */
     float32  Um_comp;      /* 修正后的最大功率点电压 */
     float32  Im_comp;      /* 修正后的最大功率点电流 */
+    float32  efficiency;   /* 补偿后MPPT参考值 / 标称最大功率点 (%) */
     
     // 环境变量
     float32  Irradiance;   /* 实时光照强度 (W/m2) */
