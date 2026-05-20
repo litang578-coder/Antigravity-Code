@@ -43,6 +43,8 @@ CompileFlags:
     - -D"__OPT_SMALL_ASSERT=1"
     - -D"__OPTIMISE_LEVEL=2"
     - -D"__SOFTFP__=1"
+    - -I"D:\keil5\ARM\ARMCC\include"
+    - -I"D:\keil5\ARM\ARMCC\include\rw"
   Remove: []
   CompilationDatabase: ./build/finger
 Diagnostics:

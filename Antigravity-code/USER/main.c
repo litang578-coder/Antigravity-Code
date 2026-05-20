@@ -8,13 +8,14 @@
 #include "pwm.h"
 #include "stm32f10x.h"
 #include "sys.h"
+#include "Test_MPPT.h"
 #include "timer.h"
 #include "usart.h"
 #include <stdio.h>
 #include <string.h>
 
 uint8_t g_battery_soc_upload = 0; // SOC上传变量
-uint8_t menu_state = 0;           // 菜单状态机: 0=主菜单, 1=详情菜单
+uint8_t menu_state = 0;           // menu: 0=main, 1=INA3221, 2=MPPT test
 
 #include "ds18b20.h"
 #include "esp8266.h"
@@ -150,8 +151,7 @@ int main(void) // 主函数
     INA226_Init();
     Key_Init();
     Beep_Init();
-    // TIM4_PWM_Init(1000, 71); // PWM频率1kHz
-    // MPPT_Init();             // MPPT算法初始化
+    Test_MPPT_Init();
 
     OLED_Clear();
     /*ESP8266配置***********************************************/
@@ -196,7 +196,9 @@ int main(void) // 主函数
         }
         if (Key4_Scan() == 1)
         {
-            menu_state = !menu_state; // 状态0与状态1之间切换
+            menu_state++;
+            if (menu_state > 2)
+                menu_state = 0;
             OLED_Clear();             // 切换状态时清屏
         }
 
@@ -241,12 +243,10 @@ int main(void) // 主函数
             g_battery_soc_upload = g_ina3221.battery_soc; // 更新待上传的SOC
             Battery_AutoChargeProcess();
 
-            /* 执行 MPPT 算法跟踪 (利用 CH2 作为 PV 输入) */
-            // MPPT_Process();
-
             /* 原有 INA226 读取 */
             volt = INA226_GetVoltage(WRITE_ADDR) * 0.00125f;
             current = INA226_ReadCurrent_A(WRITE_ADDR);
+            Test_MPPT_Process();
 
             if (Relay)
             {
@@ -281,12 +281,16 @@ int main(void) // 主函数
                 OLED_printf(0, 4, "Volt:%.2fV ", volt);
                 OLED_printf(0, 6, "Curr:%.3fA ", current);
             }
-            else
+            else if (menu_state == 1)
             {
                 OLED_printf(0, 0, "CH1:%.1fV %.2fA", g_ina3221.ch1_voltage, g_ina3221.ch1_current);
                 OLED_printf(0, 2, "CH2:%.1fV %.2fA", g_ina3221.ch2_voltage, g_ina3221.ch2_current);
                 OLED_printf(0, 4, "CH3:%.1fV %.2fA", g_ina3221.ch3_voltage, g_ina3221.ch3_current);
                 OLED_printf(0, 6, "SOC:%3d%%", g_ina3221.battery_soc);
+            }
+            else
+            {
+                Test_MPPT_Display();
             }
 
             if (onenet_connected)

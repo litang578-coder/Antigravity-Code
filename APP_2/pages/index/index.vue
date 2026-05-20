@@ -53,14 +53,17 @@
 
       <charging-control-card
         :is-charging="isCharging"
-        :loading="isChargingLoading"
-        @toggle="handleToggleCharging"
+        :charging-loading="isChargingLoading"
+        :battery-channel-enabled="Relay_BAT"
+        :battery-channel-loading="isBatteryChannelLoading"
+        @toggle-charging="handleToggleCharging"
+        @toggle-battery-channel="handleToggleBatteryChannel"
       />
 
-      <voltage-chart-card
-        :volt="volt"
+      <power-chart-card
+        :power="currentPower"
         :is-data-ready="isDataReady"
-        :voltage-history="voltageHistory"
+        :power-history="powerHistory"
       />
     </view>
   </view>
@@ -72,7 +75,7 @@ import DashboardHero from './components/DashboardHero.vue'
 import MetricCard from './components/MetricCard.vue'
 import BatterySocCard from './components/BatterySocCard.vue'
 import ChargingControlCard from './components/ChargingControlCard.vue'
-import VoltageChartCard from './components/VoltageChartCard.vue'
+import PowerChartCard from './components/PowerChartCard.vue'
 
 const { createCommonToken } = require('@/key.js')
 
@@ -89,7 +92,7 @@ export default {
     MetricCard,
     BatterySocCard,
     ChargingControlCard,
-    VoltageChartCard
+    PowerChartCard
   },
   data() {
     return {
@@ -121,13 +124,18 @@ export default {
       isChargingLoading: false,
       pendingChargingState: null,
       chargingToggleTimer: null,
-      relayToggleTimer: null,
-      voltageHistory: []
+      isBatteryChannelLoading: false,
+      pendingBatteryChannelState: null,
+      batteryChannelToggleTimer: null,
+      powerHistory: []
     }
   },
   computed: {
     isDataReady() {
       return this.hasReceivedData && this.isDataConnected
+    },
+    currentPower() {
+      return this.volt * this.current
     },
     temperatureColorClass() {
       // 使用平滑后的数值来判断颜色，过渡更自然
@@ -146,7 +154,6 @@ export default {
   },
   onShow() {
     this.startSmoothing()
-    this.startRelayMock()
     this.startPolling()
   },
   onHide() {
@@ -258,20 +265,14 @@ export default {
 
       this.pendingChargingState = null
 
-      if (this.relayToggleTimer) {
-        clearInterval(this.relayToggleTimer)
-        this.relayToggleTimer = null
+      if (this.batteryChannelToggleTimer) {
+        clearTimeout(this.batteryChannelToggleTimer)
+        this.batteryChannelToggleTimer = null
       }
 
+      this.pendingBatteryChannelState = null
       this.isChargingLoading = false
-    },
-    startRelayMock() {
-      if (this.relayToggleTimer) return
-
-      // 本地预览用继电器指示模拟切换，便于观察双路高亮过渡
-      this.relayToggleTimer = setInterval(() => {
-        this.Relay_BAT = !this.Relay_BAT
-      }, 15000)
+      this.isBatteryChannelLoading = false
     },
     markDataReceived() {
       this.hasReceivedData = true
@@ -345,6 +346,42 @@ export default {
 
       this.isCharging = nextCharging
     },
+    startBatteryChannelConfirmation(nextBatteryChannelState) {
+      this.pendingBatteryChannelState = nextBatteryChannelState
+
+      if (this.batteryChannelToggleTimer) {
+        clearTimeout(this.batteryChannelToggleTimer)
+      }
+
+      this.batteryChannelToggleTimer = setTimeout(() => {
+        this.batteryChannelToggleTimer = null
+        this.pendingBatteryChannelState = null
+        this.isBatteryChannelLoading = false
+        this.requestImmediatePoll(0)
+      }, CHARGING_CONFIRM_TIMEOUT)
+    },
+    clearBatteryChannelConfirmation() {
+      if (this.batteryChannelToggleTimer) {
+        clearTimeout(this.batteryChannelToggleTimer)
+        this.batteryChannelToggleTimer = null
+      }
+
+      this.pendingBatteryChannelState = null
+      this.isBatteryChannelLoading = false
+    },
+    handleBatteryChannelStateFromCloud(value) {
+      const nextBatteryChannelState = this.normalizeBooleanValue(value)
+
+      if (this.isBatteryChannelLoading && this.pendingBatteryChannelState !== null) {
+        if (nextBatteryChannelState === this.pendingBatteryChannelState) {
+          this.Relay_BAT = nextBatteryChannelState
+          this.clearBatteryChannelConfirmation()
+        }
+        return
+      }
+
+      this.Relay_BAT = nextBatteryChannelState
+    },
     handleToggleCharging(nextChargingState) {
       const previousChargingState = this.isCharging
 
@@ -380,12 +417,49 @@ export default {
         }
       })
     },
-    updateVoltageHistory(value) {
-      const point = Number(value)
+    handleToggleBatteryChannel(nextBatteryChannelState) {
+      const previousBatteryChannelState = this.Relay_BAT
 
-      if (Number.isNaN(point)) return
+      this.Relay_BAT = nextBatteryChannelState
+      this.isBatteryChannelLoading = true
+      uni.vibrateShort()
+      console.log(`下发指令: ${JSON.stringify({ Relay_BAT: this.Relay_BAT })}`)
 
-      this.voltageHistory = this.voltageHistory.concat(point).slice(-30)
+      this.startBatteryChannelConfirmation(nextBatteryChannelState)
+
+      uni.request({
+        url: 'https://iot-api.heclouds.com/thingmodel/set-device-property',
+        method: 'POST',
+        timeout: REQUEST_TIMEOUT,
+        data: {
+          product_id: 'dtk3h50J6V',
+          device_name: 'dachuang',
+          params: {
+            Relay_BAT: nextBatteryChannelState
+          }
+        },
+        header: { authorization: this.token },
+        success: () => {
+          this.requestImmediatePoll(CHARGING_CONFIRM_REFRESH_DELAY)
+        },
+        fail: () => {
+          this.clearBatteryChannelConfirmation()
+          this.Relay_BAT = previousBatteryChannelState
+          uni.showToast({
+            title: '电池通道控制失败',
+            icon: 'none'
+          })
+        }
+      })
+    },
+    updatePowerHistory(volt, current) {
+      const v = Number(volt)
+      const c = Number(current)
+
+      if (Number.isNaN(v) || Number.isNaN(c)) return
+
+      const power = v * c
+      this.powerHistory = this.powerHistory.concat(power).slice(-30)
     },
     buildDevicePropertyMap(dataList) {
       return dataList.reduce((propertyMap, item) => {
@@ -436,7 +510,8 @@ export default {
           if (voltVal !== null) {
             const nextVolt = Number(voltVal)
             this.targetVolt = nextVolt
-            this.updateVoltageHistory(nextVolt)
+            const curVal = getVal('current')
+            this.updatePowerHistory(nextVolt, curVal !== null ? Number(curVal) : this.targetCurrent)
           }
 
           const batterySocVal = getVal('battery_soc')
@@ -459,7 +534,7 @@ export default {
 
           const relayBatVal = getVal('Relay_BAT')
           if (relayBatVal !== null) {
-            this.Relay_BAT = this.normalizeBooleanValue(relayBatVal)
+            this.handleBatteryChannelStateFromCloud(relayBatVal)
           }
         },
         complete: () => {

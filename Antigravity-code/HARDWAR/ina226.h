@@ -5,8 +5,8 @@
  
  
 /********** 硬件参数配置 **********/
-#define SHUNT_RESISTOR    0.010f				// 分流电阻10毫欧
-#define MAX_CURRENT				10.0f					// 最大电流
+#define SHUNT_RESISTOR    0.100f				// 分流电阻100毫欧
+#define MAX_CURRENT       0.65536f					// 建议最大电流
  
 ///********** 软件参数 **********/
 static float Current_LSB;								// 电流分辨率
@@ -33,11 +33,11 @@ static float Power_LSB;     						// 功率校准值
 #define WRITE_ADDR1       0x8A		//芯片IIC地址
  
 #define Config_Reg        0x00		//模式配置寄存器
-#define Shunt_V_Reg       0x01		//采样电阻压差；取值：2.5uV~81.92mV(0~7FFF)(10mΩ采样电阻下最大电流8A)
+#define Shunt_V_Reg       0x01      //shunt voltage: 2.5uV/bit, 0.1R shunt max about 819mA
 #define Bus_V_Reg         0x02		//BUS总线电压：1.25mV~40.96V(0~7FFF)
 #define Power_Reg         0x03		//功率；Current_LSB * 25，FSR = 0xFFFF
 #define Current_Reg       0x04		//电流；LSB = 0.02mA，FSR = 0x7FFF
-#define Calib_Reg         0x05		//（当单位为mA时：采样电阻0.002R=0xA00;0.01R=0x200）；写入Calibration Register的数据需要根据实际电路中的采样电阻阻值以及电流分辨率来设置
+#define Calib_Reg         0x05      //calibration register, depends on shunt resistor and Current_LSB
 #define Mask_En_Reg       0x06		//
 #define Alert_Reg         0x07		//
 #define Man_ID_Reg        0xFE  	//0x5449

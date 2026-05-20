@@ -18,19 +18,42 @@
       </view>
     </view>
 
-    <view
-      class="control-switch"
-      :class="{
-        'control-switch--active': isCharging,
-        'control-switch--loading': loading
-      }"
-    >
-      <switch
-        :checked="isCharging"
-        :disabled="loading"
-        @change="emitToggle"
-      />
-      <view v-if="loading" class="control-switch__loading"></view>
+    <view class="control-card__switches">
+      <view class="control-switch-control">
+        <text class="control-switch-control__label">太阳能</text>
+        <view
+          class="control-switch"
+          :class="{
+            'control-switch--active': isCharging,
+            'control-switch--loading': chargingLoading
+          }"
+        >
+          <switch
+            :checked="isCharging"
+            :disabled="chargingLoading"
+            @change="emitChargingToggle"
+          />
+          <view v-if="chargingLoading" class="control-switch__loading"></view>
+        </view>
+      </view>
+
+      <view class="control-switch-control">
+        <text class="control-switch-control__label">电池通道</text>
+        <view
+          class="control-switch control-switch--battery"
+          :class="{
+            'control-switch--active': batteryChannelEnabled,
+            'control-switch--loading': batteryChannelLoading
+          }"
+        >
+          <switch
+            :checked="batteryChannelEnabled"
+            :disabled="batteryChannelLoading"
+            @change="emitBatteryChannelToggle"
+          />
+          <view v-if="batteryChannelLoading" class="control-switch__loading"></view>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -43,14 +66,25 @@ export default {
       type: Boolean,
       default: false
     },
-    loading: {
+    chargingLoading: {
+      type: Boolean,
+      default: false
+    },
+    batteryChannelEnabled: {
+      type: Boolean,
+      default: false
+    },
+    batteryChannelLoading: {
       type: Boolean,
       default: false
     }
   },
   methods: {
-    emitToggle(event) {
-      this.$emit('toggle', Boolean(event.detail.value))
+    emitChargingToggle(event) {
+      this.$emit('toggle-charging', Boolean(event.detail.value))
+    },
+    emitBatteryChannelToggle(event) {
+      this.$emit('toggle-battery-channel', Boolean(event.detail.value))
     }
   }
 }
@@ -170,6 +204,27 @@ export default {
   transform: translate(-50%, -50%) rotate(315deg);
 }
 
+.control-card__switches {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+}
+
+.control-switch-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.control-switch-control__label {
+  font-size: 20rpx;
+  line-height: 1;
+  color: rgba(218, 232, 255, 0.72);
+  white-space: nowrap;
+}
+
 .control-switch {
   position: relative;
   flex-shrink: 0;
@@ -191,6 +246,13 @@ export default {
   background: #007aff !important;
   border-color: #007aff !important;
   box-shadow: 0 0 10px #007aff !important;
+}
+
+.control-switch--battery.control-switch--active ::v-deep .uni-switch-input,
+.control-switch--battery.control-switch--active ::v-deep .wx-switch-input {
+  background: #39ff88 !important;
+  border-color: #39ff88 !important;
+  box-shadow: 0 0 10px rgba(57, 255, 136, 0.78) !important;
 }
 
 .control-switch ::v-deep .uni-switch-input::after,
@@ -263,6 +325,18 @@ export default {
   .sun-icon {
     transform: scale(0.88);
   }
+
+  .control-card__switches {
+    gap: 14rpx;
+  }
+
+  .control-switch-control {
+    gap: 10rpx;
+  }
+
+  .control-switch-control__label {
+    font-size: 18rpx;
+  }
 }
 
 @media screen and (max-width: 360px) {
@@ -270,7 +344,7 @@ export default {
     align-items: flex-start;
   }
 
-  .control-switch {
+  .control-card__switches {
     align-self: flex-end;
   }
 }

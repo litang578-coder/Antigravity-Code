@@ -52,34 +52,24 @@ void INA226_IIC_Init(void)
  
 void INA226_Init(void)
 {
-		uint16_t Cal ;
+    uint16_t Cal;
+
     INA226_IIC_Init();
     delay_nms(10);
-// //因为Shunt Voltage Register的值最大为0x7FFF，LSB=2.5uV， FSR = 81.92mV。
-//又因为分流电阻阻值为0.1欧，所以最大电流为819.2mA。
-//(注意这个问题，避免在实际使用中出现的超量程情况，以至得出错误测量数据)
-//所以Maximum Expected Current的值不能超过819.2mA。
-//假设Current_LSB = 0.02mA，则Maximum Expected Current = 655.36mA，满足上述条件。
-//则CAL = 0.00512/(0.02*0.1)*1000 = 2560= 0x0A00。
-//所以最后写入Calibration Register中的数据为0x0A00。
-    //INA226_SendData(WRITE_ADDR,0x00,0x4807);// 配置参数：平均值128，总线电压转换时间0.14ms，分流电压转换时间0.14ms，连续测量模式
- 	INA226_SendData(WRITE_ADDR,0x00,0x4807); 
-	// 计算校准值
 
-/*
-	Shunt Voltage Register的值最大为0x7FFF  32768
-	LSB=2.5uV FSR = 81.92mV。
-	R=0.01欧，所以最大电流为8.192A。
-	假设Current_LSB = 2MA,
-	*/
-	 Current_LSB=0.0002;  //2ma
-	
-	//Current_LSB = 0.0512;
-	 //Current_LSB = 0.000305f;		// ≈ MAX_CURRENT / 2的15次方
-//  Cal = (uint16_t)(0.00512f / (Current_LSB * SHUNT_RESISTOR));
-	Cal =0x0A00;
-	
-   INA226_SendData(WRITE_ADDR,0x05,Cal);
+    INA226_SendData(WRITE_ADDR, 0x00, 0x4807);
+
+    /*
+     * INA226 shunt voltage LSB is 2.5uV, full scale is 81.92mV.
+     * With a 0.1R shunt, hardware full scale is about 819mA.
+     * Current_LSB = 0.02mA keeps expected current within 655.36mA.
+     * Cal = 0.00512 / (0.00002 * 0.1) = 2560 = 0x0A00.
+     */
+    Current_LSB = 0.00002f;
+    Cal = (uint16_t)(0.00512f / (Current_LSB * SHUNT_RESISTOR) + 0.5f);
+    Power_LSB = Current_LSB * 25.0f;
+
+    INA226_SendData(WRITE_ADDR, 0x05, Cal);
 }
  
 void INA226_Init1(void)
@@ -92,7 +82,7 @@ void INA226_Init1(void)
 	 // 计算校准值 
 	 Current_LSB=(float)MAX_CURRENT/32768;
 	 //Current_LSB = 0.000305f;		// ≈ MAX_CURRENT / 2的15次方
-   Cal = (uint16_t)(0.00512f / (Current_LSB * SHUNT_RESISTOR));
+   Cal = (uint16_t)(0.00512f / (Current_LSB * SHUNT_RESISTOR) + 0.5f);
    INA226_SendData(WRITE_ADDR1,0x05,Cal);
 	
 	Power_LSB = Current_LSB * 25.0f;		// 功率校准值 = 电流最小值 * 25倍

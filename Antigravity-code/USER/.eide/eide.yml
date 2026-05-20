@@ -59,7 +59,6 @@ virtualFolder:
         - path: ../HARDWAR/ds18b20.c
         - path: ../HARDWAR/ina226.c
         - path: ../HARDWAR/timer.c
-        - path: ../HARDWAR/bsp_adc.c
         - path: ../HARDWAR/modbus.c
         - path: ../HARDWAR/mppt.c
         - path: ../HARDWAR/mppt.h
@@ -67,6 +66,8 @@ virtualFolder:
         - path: ../HARDWAR/pwm.h
         - path: ../HARDWAR/ina3221.c
         - path: ../HARDWAR/ina3221.h
+        - path: ../HARDWAR/Test_MPPT.c
+        - path: ../HARDWAR/Test_MPPT.h
       folders: []
     - name: Net_device
       files:
