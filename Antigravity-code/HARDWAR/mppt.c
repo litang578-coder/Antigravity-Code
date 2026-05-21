@@ -28,14 +28,16 @@ void MPPT_Init(void)
     g_mppt.pwm_duty = 500;
     
     // 2. 光伏面板标称参数 (请在此处手动修改你的面板参数)
-    g_mppt.Uoc_nom = 9.0f;     /* 标称开路电压 */
-    g_mppt.Um_nom  = 11.5f;     /* 标称最大功率点电压 */
-    g_mppt.Isc_nom = 0.22f;     /* 标称短路电流 */
-    g_mppt.Im_nom  = 0.24f;     /* 标称最大功率点电流 */
+    g_mppt.Uoc_nom = 11.2f;     /* 标称开路电压 */
+    g_mppt.Um_nom  = 9.0f;      /* 标称最大功率点电压 */
+    g_mppt.Isc_nom = 0.24f;     /* 标称短路电流 */
+    g_mppt.Im_nom  = 0.22f;     /* 标称最大功率点电流 */
     
     // 3. 环境变量初始化
     g_mppt.Irradiance = 1000.0f; /* 默认 1000W/m2 */
     g_mppt.Temp_Air = 25.0f;
+    g_mppt.P_mpp_nom = g_mppt.Um_nom * g_mppt.Im_nom;
+    g_mppt.P_mpp_comp = 0.0f;
     g_mppt.efficiency = 0.0f;
 }
 

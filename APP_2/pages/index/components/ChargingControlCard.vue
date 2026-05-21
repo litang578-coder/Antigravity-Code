@@ -1,26 +1,31 @@
 <template>
   <view class="control-card">
-    <view class="control-card__info">
-      <view class="control-card__icon">
-        <view class="sun-icon">
-          <view class="sun-icon__core"></view>
-          <view
-            v-for="index in 8"
-            :key="index"
-            class="sun-icon__ray"
-            :class="`sun-icon__ray--${index}`"
-          ></view>
+    <view class="control-panel control-panel--solar">
+      <view class="control-panel__header">
+        <view class="control-panel__icon control-panel__icon--solar">
+          <view class="sun-icon">
+            <view class="sun-icon__core"></view>
+            <view
+              v-for="index in 8"
+              :key="index"
+              class="sun-icon__ray"
+              :class="`sun-icon__ray--${index}`"
+            ></view>
+          </view>
+        </view>
+        <view class="control-panel__text">
+          <text class="control-panel__title">太阳能充电</text>
+          <text
+            class="control-panel__status"
+            :class="{ 'control-panel__status--active': isCharging }"
+          >
+            {{ chargingStatusText }}
+          </text>
         </view>
       </view>
-      <view class="control-card__text">
-        <text class="control-card__title">太阳能充电控制</text>
-        <text class="control-card__subtitle">Solar Charging Control</text>
-      </view>
-    </view>
 
-    <view class="control-card__switches">
-      <view class="control-switch-control">
-        <text class="control-switch-control__label">太阳能</text>
+      <view class="control-panel__footer">
+        <text class="control-panel__meta">Solar Charging</text>
         <view
           class="control-switch"
           :class="{
@@ -36,9 +41,34 @@
           <view v-if="chargingLoading" class="control-switch__loading"></view>
         </view>
       </view>
+    </view>
 
-      <view class="control-switch-control">
-        <text class="control-switch-control__label">电池通道</text>
+    <view class="control-panel control-panel--battery">
+      <view class="control-panel__header">
+        <view class="control-panel__icon control-panel__icon--battery">
+          <view class="channel-icon">
+            <view class="channel-icon__body">
+              <view
+                class="channel-icon__fill"
+                :class="{ 'channel-icon__fill--active': batteryChannelEnabled }"
+              ></view>
+            </view>
+            <view class="channel-icon__cap"></view>
+          </view>
+        </view>
+        <view class="control-panel__text">
+          <text class="control-panel__title">电池通道</text>
+          <text
+            class="control-panel__status"
+            :class="{ 'control-panel__status--active': batteryChannelEnabled }"
+          >
+            {{ batteryChannelStatusText }}
+          </text>
+        </view>
+      </view>
+
+      <view class="control-panel__footer">
+        <text class="control-panel__meta">{{ batteryChannelMetaText }}</text>
         <view
           class="control-switch control-switch--battery"
           :class="{
@@ -79,12 +109,35 @@ export default {
       default: false
     }
   },
+  computed: {
+    chargingStatusText() {
+      if (this.chargingLoading) return '同步中'
+      return this.isCharging ? '正在充电' : '充电关闭'
+    },
+    batteryChannelStatusText() {
+      if (this.batteryChannelLoading) return '同步中'
+      return this.batteryChannelEnabled ? '电池 2' : '电池 1'
+    },
+    batteryChannelMetaText() {
+      return `当前通道：${this.batteryChannelEnabled ? '电池 2' : '电池 1'}`
+    }
+  },
   methods: {
+    normalizeSwitchValue(value) {
+      if (typeof value === 'boolean') return value
+      if (typeof value === 'number') return value === 1
+      if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase()
+        if (normalized === 'true' || normalized === '1') return true
+        if (normalized === 'false' || normalized === '0') return false
+      }
+      return Boolean(value)
+    },
     emitChargingToggle(event) {
-      this.$emit('toggle-charging', Boolean(event.detail.value))
+      this.$emit('toggle-charging', this.normalizeSwitchValue(event.detail.value))
     },
     emitBatteryChannelToggle(event) {
-      this.$emit('toggle-battery-channel', Boolean(event.detail.value))
+      this.$emit('toggle-battery-channel', this.normalizeSwitchValue(event.detail.value))
     }
   }
 }
@@ -95,51 +148,94 @@ export default {
 
 .control-card {
   margin-top: $space-xl;
-  @include glass-card;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-lg;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
 }
 
-.control-card__info {
-  display: flex;
-  align-items: center;
-  gap: 24rpx;
+.control-panel {
+  @include glass-card(26rpx 24rpx);
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24rpx;
 }
 
-.control-card__icon {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 24rpx;
+.control-panel__header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 18rpx;
+}
+
+.control-panel__icon {
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 22rpx;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 194, 61, 0.12);
-  border: 1rpx solid rgba(255, 213, 118, 0.2);
   box-shadow:
     inset 0 1rpx 0 rgba(255, 255, 255, 0.08),
     0 0 24rpx rgba(255, 186, 61, 0.14);
 }
 
-.control-card__text {
+.control-panel__icon--solar {
+  background: rgba(255, 194, 61, 0.12);
+  border: 1rpx solid rgba(255, 213, 118, 0.2);
+}
+
+.control-panel__icon--battery {
+  background: rgba(57, 255, 136, 0.1);
+  border: 1rpx solid rgba(95, 255, 165, 0.2);
+  box-shadow:
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.08),
+    0 0 24rpx rgba(57, 255, 136, 0.12);
+}
+
+.control-panel__text {
   min-width: 0;
 }
 
-.control-card__title {
+.control-panel__title {
   display: block;
-  font-size: 30rpx;
+  font-size: 28rpx;
+  line-height: 1.25;
   font-weight: 600;
   color: $color-text-primary;
 }
 
-.control-card__subtitle {
+.control-panel__status {
   display: block;
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: rgba(191, 216, 255, 0.65);
-  letter-spacing: 1rpx;
+  line-height: 1.2;
+  color: rgba(191, 216, 255, 0.68);
+  white-space: nowrap;
+}
+
+.control-panel__status--active {
+  color: $color-accent-success;
+}
+
+.control-panel__footer {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.control-panel__meta {
+  min-width: 0;
+  font-size: 20rpx;
+  line-height: 1.2;
+  color: rgba(218, 232, 255, 0.68);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sun-icon {
@@ -204,25 +300,40 @@ export default {
   transform: translate(-50%, -50%) rotate(315deg);
 }
 
-.control-card__switches {
-  flex-shrink: 0;
+.channel-icon {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 22rpx;
 }
 
-.control-switch-control {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12rpx;
+.channel-icon__body {
+  width: 38rpx;
+  height: 24rpx;
+  padding: 4rpx;
+  border-radius: 8rpx;
+  border: 3rpx solid rgba(244, 251, 255, 0.86);
+  box-sizing: border-box;
+  background: rgba(244, 251, 255, 0.08);
 }
 
-.control-switch-control__label {
-  font-size: 20rpx;
-  line-height: 1;
-  color: rgba(218, 232, 255, 0.72);
-  white-space: nowrap;
+.channel-icon__fill {
+  width: 48%;
+  height: 100%;
+  border-radius: 4rpx;
+  background: $color-accent-blue;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.channel-icon__fill--active {
+  width: 100%;
+  background: $color-accent-success;
+}
+
+.channel-icon__cap {
+  width: 5rpx;
+  height: 12rpx;
+  border-radius: 0 4rpx 4rpx 0;
+  background: rgba(244, 251, 255, 0.86);
 }
 
 .control-switch {
@@ -298,54 +409,57 @@ export default {
 @media screen and (max-width: 480px) {
   .control-card {
     margin-top: 22rpx;
-    padding: 24rpx 22rpx;
-    gap: 18rpx;
-  }
-
-  .control-card__info {
-    gap: 18rpx;
-  }
-
-  .control-card__icon {
-    width: 76rpx;
-    height: 76rpx;
-    border-radius: 20rpx;
-  }
-
-  .control-card__title {
-    font-size: 26rpx;
-  }
-
-  .control-card__subtitle {
-    margin-top: 8rpx;
-    font-size: 20rpx;
-    letter-spacing: 0;
-  }
-
-  .sun-icon {
-    transform: scale(0.88);
-  }
-
-  .control-card__switches {
     gap: 14rpx;
   }
 
-  .control-switch-control {
-    gap: 10rpx;
+  .control-panel {
+    padding: 22rpx 18rpx;
+    gap: 18rpx;
   }
 
-  .control-switch-control__label {
+  .control-panel__header {
+    gap: 14rpx;
+  }
+
+  .control-panel__icon {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 18rpx;
+  }
+
+  .control-panel__title {
+    font-size: 24rpx;
+  }
+
+  .control-panel__status {
+    margin-top: 8rpx;
+    font-size: 20rpx;
+  }
+
+  .control-panel__footer {
+    gap: 12rpx;
+  }
+
+  .control-panel__meta {
     font-size: 18rpx;
+  }
+
+  .sun-icon {
+    transform: scale(0.82);
+  }
+
+  .channel-icon {
+    transform: scale(0.9);
   }
 }
 
 @media screen and (max-width: 360px) {
   .control-card {
-    align-items: flex-start;
+    grid-template-columns: 1fr;
   }
 
-  .control-card__switches {
-    align-self: flex-end;
+  .control-panel {
+    min-height: 154rpx;
   }
 }
 </style>

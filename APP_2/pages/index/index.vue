@@ -306,9 +306,32 @@ export default {
       if (typeof value === 'number') return value === 1
       if (typeof value === 'string') {
         const normalized = value.trim().toLowerCase()
-        return normalized === 'true' || normalized === '1'
+        if (normalized === 'true' || normalized === '1') return true
+        if (normalized === 'false' || normalized === '0') return false
       }
       return false
+    },
+    getSetPropertyErrorMessage(res) {
+      const statusCode = res && res.statusCode
+      const data = res && res.data ? res.data : {}
+      const code = data.code
+      const message = data.msg || data.message || data.errmsg || ''
+
+      if (statusCode !== 200) {
+        return `HTTP ${statusCode || '异常'}`
+      }
+
+      if (code !== 0 && code !== '0') {
+        return message || `云端返回码 ${code === undefined ? '缺失' : code}`
+      }
+
+      return ''
+    },
+    showControlFailToast(title, message) {
+      uni.showToast({
+        title: message ? `${title}：${message}` : title,
+        icon: 'none'
+      })
     },
     startChargingConfirmation(nextChargingState) {
       this.pendingChargingState = nextChargingState
@@ -384,11 +407,18 @@ export default {
     },
     handleToggleCharging(nextChargingState) {
       const previousChargingState = this.isCharging
+      const requestData = {
+        product_id: 'dtk3h50J6V',
+        device_name: 'dachuang',
+        params: {
+          botton1: nextChargingState
+        }
+      }
 
       this.isCharging = nextChargingState
       this.isChargingLoading = true
       uni.vibrateShort()
-      console.log(`下发指令: ${JSON.stringify({ botton1: this.isCharging })}`)
+      console.log('[太阳能充电] 下发参数:', JSON.stringify(requestData.params))
 
       this.startChargingConfirmation(nextChargingState)
 
@@ -396,34 +426,46 @@ export default {
         url: 'https://iot-api.heclouds.com/thingmodel/set-device-property',
         method: 'POST',
         timeout: REQUEST_TIMEOUT,
-        data: {
-          product_id: 'dtk3h50J6V',
-          device_name: 'dachuang',
-          params: {
-            botton1: nextChargingState
-          }
-        },
+        data: requestData,
         header: { authorization: this.token },
-        success: () => {
+        success: (res) => {
+          console.log('[太阳能充电] 云端响应:', {
+            statusCode: res.statusCode,
+            data: res.data
+          })
+
+          const errorMessage = this.getSetPropertyErrorMessage(res)
+          if (errorMessage) {
+            this.clearChargingConfirmation()
+            this.isCharging = previousChargingState
+            this.showControlFailToast('控制下发失败', errorMessage)
+            return
+          }
+
           this.requestImmediatePoll(CHARGING_CONFIRM_REFRESH_DELAY)
         },
-        fail: () => {
+        fail: (err) => {
+          console.log('[太阳能充电] 请求失败:', err)
           this.clearChargingConfirmation()
           this.isCharging = previousChargingState
-          uni.showToast({
-            title: '控制下发失败',
-            icon: 'none'
-          })
+          this.showControlFailToast('控制下发失败', err && err.errMsg ? err.errMsg : '')
         }
       })
     },
     handleToggleBatteryChannel(nextBatteryChannelState) {
       const previousBatteryChannelState = this.Relay_BAT
+      const requestData = {
+        product_id: 'dtk3h50J6V',
+        device_name: 'dachuang',
+        params: {
+          Relay_BAT: nextBatteryChannelState
+        }
+      }
 
       this.Relay_BAT = nextBatteryChannelState
       this.isBatteryChannelLoading = true
       uni.vibrateShort()
-      console.log(`下发指令: ${JSON.stringify({ Relay_BAT: this.Relay_BAT })}`)
+      console.log('[电池通道] 下发参数:', JSON.stringify(requestData.params))
 
       this.startBatteryChannelConfirmation(nextBatteryChannelState)
 
@@ -431,24 +473,29 @@ export default {
         url: 'https://iot-api.heclouds.com/thingmodel/set-device-property',
         method: 'POST',
         timeout: REQUEST_TIMEOUT,
-        data: {
-          product_id: 'dtk3h50J6V',
-          device_name: 'dachuang',
-          params: {
-            Relay_BAT: nextBatteryChannelState
-          }
-        },
+        data: requestData,
         header: { authorization: this.token },
-        success: () => {
+        success: (res) => {
+          console.log('[电池通道] 云端响应:', {
+            statusCode: res.statusCode,
+            data: res.data
+          })
+
+          const errorMessage = this.getSetPropertyErrorMessage(res)
+          if (errorMessage) {
+            this.clearBatteryChannelConfirmation()
+            this.Relay_BAT = previousBatteryChannelState
+            this.showControlFailToast('电池通道控制失败', errorMessage)
+            return
+          }
+
           this.requestImmediatePoll(CHARGING_CONFIRM_REFRESH_DELAY)
         },
-        fail: () => {
+        fail: (err) => {
+          console.log('[电池通道] 请求失败:', err)
           this.clearBatteryChannelConfirmation()
           this.Relay_BAT = previousBatteryChannelState
-          uni.showToast({
-            title: '电池通道控制失败',
-            icon: 'none'
-          })
+          this.showControlFailToast('电池通道控制失败', err && err.errMsg ? err.errMsg : '')
         }
       })
     },
