@@ -41,6 +41,7 @@ extern float temp;
 extern uint8_t g_battery_soc_upload;
 #include "delay.h"
 #include "IO_Init.h"
+#include "mppt.h"
 //#include "GUI.h"
 //#include "Lcd_Driver.h"
 
@@ -54,6 +55,8 @@ extern uint8_t g_battery_soc_upload;
 #define ACCESS_KEY		"ZXdtVzNvb29CRll3N1FsZUdiZlFxUmFaNUdpNVdyRnA="
 
 #define DEVICE_NAME		"dachuang"
+
+#define ONENET_UPLOAD_BUF_SIZE	384
 
 
 char devid[16];
@@ -383,24 +386,24 @@ _Bool OneNet_DevLink(void)
 	return status;
 	
 }
-unsigned char OneNet_FillBuf(char *buf)
+short OneNet_FillBuf(char *buf, unsigned short buf_size)
 {
+	int n;
+
 	if(buf == (void *)0)
 		return 0;
+	if(buf_size == 0)
+		return 0;
 
-	// ���� OneNet ƽ̨������ JSON ��ʽ������ temp/volt/current
-	// ʾ��: {"id":"123","params":{"temp":{"value":24.5},"volt":{"value":3.70},"current":{"value":0.123}}}
-	// ���̵���״̬Ҳ�ϱ��� OneNet��0 �� 1��
-	/* �ϱ���ʽ������Relay ʹ�ò������ͣ���ʶ����Ϊ botton1 */
-	int n = snprintf(buf, 256, "{\"id\":\"123\",\"params\":{\"temp\":{\"value\":%.1f},\"volt\":{\"value\":%.2f},\"current\":{\"value\":%.3f},\"botton1\":{\"value\":%s},\"battery_soc\":{\"value\":%d},\"Relay_BAT\":{\"value\":%s}}}",
-					 temp, volt, current, (Relay ? "true" : "false"), (int)g_battery_soc_upload, (Relay_BAT ? "true" : "false"));
+	n = snprintf(buf, buf_size, "{\"id\":\"123\",\"params\":{\"temp\":{\"value\":%.1f},\"volt\":{\"value\":%.2f},\"current\":{\"value\":%.3f},\"botton1\":{\"value\":%s},\"battery_soc\":{\"value\":%d},\"Relay_BAT\":{\"value\":%s},\"Um_comp\":{\"value\":%.2f},\"Im_comp\":{\"value\":%.3f},\"power\":{\"value\":%.3f}}}",
+				 temp, volt, current, (Relay ? "true" : "false"), (int)g_battery_soc_upload, (Relay_BAT ? "true" : "false"), g_mppt.Um_comp, g_mppt.Im_comp, g_mppt.P_mpp_comp);
 
 	if(n < 0)
 		return 0;
-	if(n > 255)
-		n = 255;
+	if(n >= buf_size)
+		return 0;
 
-	return (unsigned char)n;
+	return (short)n;
 
 }	
 
@@ -420,7 +423,7 @@ void OneNet_SendData(void)
 	
 	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};					//Э���?
 	
-	char buf[256];
+	char buf[ONENET_UPLOAD_BUF_SIZE];
 	
 	short body_len = 0, i = 0;
 	
@@ -428,7 +431,7 @@ void OneNet_SendData(void)
 	
 	memset(buf, 0, sizeof(buf));
 	
-	body_len = OneNet_FillBuf(buf);			//��ȡ��ǰ��Ҫ���͵����������ܳ���
+	body_len = OneNet_FillBuf(buf, sizeof(buf));			//��ȡ��ǰ��Ҫ���͵����������ܳ���
 	
 	if(body_len)
 	{
