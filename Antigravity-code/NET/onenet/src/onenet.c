@@ -582,6 +582,49 @@ void OneNet_RevPro(unsigned char *cmd)
 								Relay = 0;
 							}
 						}
+
+						relay_json = cJSON_GetObjectItem(params_json, "Relay_BAT");
+						if(relay_json != NULL)
+						{
+							relay_value_json = cJSON_GetObjectItem(relay_json, "value");
+							if(relay_value_json != NULL)
+								relay_json = relay_value_json;
+
+							if(relay_json->type == cJSON_True)
+							{
+								Relay_BAT = 1;
+							}
+							else if(relay_json->type == cJSON_False)
+							{
+								Relay_BAT = 0;
+							}
+						}
+
+						if(cmdid_topic != NULL && strstr(cmdid_topic, "/thing/property/set") != NULL)
+						{
+							char reply_topic[80];
+							char reply_msg[128];
+							char id_buf[16];
+							const char *request_id = "0";
+							cJSON *id_json = cJSON_GetObjectItem(raw_json, "id");
+
+							if(id_json != NULL)
+							{
+								if(id_json->type == cJSON_String && id_json->valuestring != NULL)
+								{
+									request_id = id_json->valuestring;
+								}
+								else if(id_json->type == cJSON_Number)
+								{
+									snprintf(id_buf, sizeof(id_buf), "%d", id_json->valueint);
+									request_id = id_buf;
+								}
+							}
+
+							snprintf(reply_topic, sizeof(reply_topic), "$sys/%s/%s/thing/property/set_reply", PROID, DEVICE_NAME);
+							snprintf(reply_msg, sizeof(reply_msg), "{\"id\":\"%s\",\"code\":200,\"msg\":\"success\"}", request_id);
+							OneNET_Publish(reply_topic, reply_msg);
+						}
 					}
 					
 					cJSON_Delete(raw_json);

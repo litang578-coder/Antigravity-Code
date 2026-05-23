@@ -1,13 +1,28 @@
 <template>
   <view class="chart-card">
     <view class="chart-card__header">
-      <view>
+      <view class="chart-card__title-block">
         <text class="chart-card__title">最近 30 秒功率波动图</text>
         <text class="chart-card__subtitle">基于最新 30 个采样点绘制</text>
+        <view v-if="isDataReady" class="chart-card__legend">
+          <view class="chart-card__legend-item">
+            <view class="chart-card__legend-swatch chart-card__legend-swatch--power"></view>
+            <text>实际功率</text>
+          </view>
+          <view class="chart-card__legend-item">
+            <view class="chart-card__legend-swatch chart-card__legend-swatch--mppt"></view>
+            <text>MPPT输出</text>
+          </view>
+        </view>
       </view>
-      <text class="chart-card__latest" :class="{ 'chart-card__latest--placeholder': !isDataReady }">
-        {{ isDataReady ? `当前 ${formattedPower} W` : '连接中...' }}
-      </text>
+      <view class="chart-card__latest-list" :class="{ 'chart-card__latest-list--placeholder': !isDataReady }">
+        <text class="chart-card__latest">
+          {{ isDataReady ? `实际 ${formattedPower} W` : '连接中...' }}
+        </text>
+        <text v-if="isDataReady" class="chart-card__latest chart-card__latest--mppt">
+          MPPT {{ formattedCompensatedPower }} W
+        </text>
+      </view>
     </view>
 
     <view class="chart-card__plot">
@@ -31,11 +46,19 @@ export default {
       type: [Number, String],
       default: 0
     },
+    compensatedPower: {
+      type: [Number, String],
+      default: null
+    },
     isDataReady: {
       type: Boolean,
       default: false
     },
     powerHistory: {
+      type: Array,
+      default: () => []
+    },
+    compensatedPowerHistory: {
       type: Array,
       default: () => []
     }
@@ -53,13 +76,17 @@ export default {
   },
   computed: {
     formattedPower() {
-      const num = Number(this.power)
-      if (Number.isNaN(num)) return '--'
-      return num.toFixed(3)
+      return this.formatPowerValue(this.power)
+    },
+    formattedCompensatedPower() {
+      return this.formatPowerValue(this.compensatedPower)
     }
   },
   watch: {
     powerHistory() {
+      this.$nextTick(() => this.scheduleDraw())
+    },
+    compensatedPowerHistory() {
       this.$nextTick(() => this.scheduleDraw())
     }
   },
@@ -145,6 +172,65 @@ export default {
       this.chartHeight = 0
       this.lastDrawAt = 0
     },
+    isBlankValue(value) {
+      return value === null || value === undefined || value === ''
+    },
+    formatPowerValue(value) {
+      if (this.isBlankValue(value)) return '--'
+      const num = Number(value)
+      if (Number.isNaN(num)) return '--'
+      return num.toFixed(3)
+    },
+    getNumericPoints(points) {
+      return points
+        .slice(-30)
+        .map((value) => Number(value))
+        .filter((value) => !Number.isNaN(value))
+    },
+    buildSmoothPath(ctx, coords) {
+      ctx.beginPath()
+      ctx.moveTo(coords[0].x, coords[0].y)
+
+      for (let i = 0; i < coords.length - 1; i += 1) {
+        const current = coords[i]
+        const next = coords[i + 1]
+        const midX = (current.x + next.x) / 2
+        const midY = (current.y + next.y) / 2
+        ctx.quadraticCurveTo(current.x, current.y, midX, midY)
+      }
+
+      const lastPoint = coords[coords.length - 1]
+      ctx.lineTo(lastPoint.x, lastPoint.y)
+    },
+    drawPoint(ctx, point, fillColor, shadowColor) {
+      ctx.beginPath()
+      ctx.fillStyle = fillColor
+      ctx.shadowColor = shadowColor
+      ctx.shadowBlur = 18
+      ctx.arc(point.x, point.y, 4, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.shadowBlur = 0
+    },
+    drawSeries(ctx, coords, color, shadowColor) {
+      if (!coords.length) return
+
+      if (coords.length === 1) {
+        this.drawPoint(ctx, coords[0], color, shadowColor)
+        return
+      }
+
+      this.buildSmoothPath(ctx, coords)
+      ctx.strokeStyle = color
+      ctx.lineWidth = 3
+      ctx.lineJoin = 'round'
+      ctx.lineCap = 'round'
+      ctx.shadowColor = shadowColor
+      ctx.shadowBlur = 16
+      ctx.stroke()
+      ctx.shadowBlur = 0
+
+      this.drawPoint(ctx, coords[coords.length - 1], color, shadowColor)
+    },
     drawChart() {
       if (!this.chartContext || !this.chartNode || !this.chartWidth || !this.chartHeight) return
       this.lastDrawAt = Date.now()
@@ -180,24 +266,13 @@ export default {
         ctx.stroke()
       }
 
-      const points = this.powerHistory.slice(-30)
-      if (!points.length) return
+      const points = this.getNumericPoints(this.powerHistory)
+      const compensatedPoints = this.getNumericPoints(this.compensatedPowerHistory)
+      const allPoints = points.concat(compensatedPoints)
+      if (!allPoints.length) return
 
-      if (points.length === 1) {
-        const x = padding.left + chartWidth / 2
-        const y = padding.top + chartHeight / 2
-        ctx.beginPath()
-        ctx.fillStyle = '#39ff88'
-        ctx.shadowColor = 'rgba(57, 255, 136, 0.85)'
-        ctx.shadowBlur = 14
-        ctx.arc(x, y, 4, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.shadowBlur = 0
-        return
-      }
-
-      let minVal = Math.min(...points)
-      let maxVal = Math.max(...points)
+      let minVal = Math.min(...allPoints)
+      let maxVal = Math.max(...allPoints)
 
       if (maxVal === minVal) {
         maxVal += 0.01
@@ -208,60 +283,37 @@ export default {
       const safeMin = minVal - range * 0.15
       const safeMax = maxVal + range * 0.15
       const safeRange = safeMax - safeMin || 1
-      const stepX = chartWidth / Math.max(points.length - 1, 1)
 
-      const coords = points.map((value, index) => {
-        const x = padding.left + stepX * index
-        const ratio = (value - safeMin) / safeRange
-        const y = padding.top + chartHeight - ratio * chartHeight
-        return { x, y }
-      })
-
-      const buildSmoothPath = () => {
-        ctx.beginPath()
-        ctx.moveTo(coords[0].x, coords[0].y)
-
-        for (let i = 0; i < coords.length - 1; i += 1) {
-          const current = coords[i]
-          const next = coords[i + 1]
-          const midX = (current.x + next.x) / 2
-          const midY = (current.y + next.y) / 2
-          ctx.quadraticCurveTo(current.x, current.y, midX, midY)
-        }
-
-        const lastPoint = coords[coords.length - 1]
-        ctx.lineTo(lastPoint.x, lastPoint.y)
+      const buildCoords = (sourcePoints) => {
+        const stepX = chartWidth / Math.max(sourcePoints.length - 1, 1)
+        return sourcePoints.map((value, index) => {
+          const x = sourcePoints.length === 1
+            ? padding.left + chartWidth / 2
+            : padding.left + stepX * index
+          const ratio = (value - safeMin) / safeRange
+          const y = padding.top + chartHeight - ratio * chartHeight
+          return { x, y }
+        })
       }
 
-      buildSmoothPath()
-      ctx.lineTo(coords[coords.length - 1].x, height - padding.bottom)
-      ctx.lineTo(coords[0].x, height - padding.bottom)
-      ctx.closePath()
+      const coords = buildCoords(points)
+      const compensatedCoords = buildCoords(compensatedPoints)
 
-      const areaGradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom)
-      areaGradient.addColorStop(0, 'rgba(57, 255, 136, 0.28)')
-      areaGradient.addColorStop(1, 'rgba(71, 184, 255, 0.02)')
-      ctx.fillStyle = areaGradient
-      ctx.fill()
+      if (coords.length > 1) {
+        this.buildSmoothPath(ctx, coords)
+        ctx.lineTo(coords[coords.length - 1].x, height - padding.bottom)
+        ctx.lineTo(coords[0].x, height - padding.bottom)
+        ctx.closePath()
 
-      buildSmoothPath()
-      ctx.strokeStyle = '#4cff95'
-      ctx.lineWidth = 3
-      ctx.lineJoin = 'round'
-      ctx.lineCap = 'round'
-      ctx.shadowColor = 'rgba(57, 255, 136, 0.9)'
-      ctx.shadowBlur = 16
-      ctx.stroke()
-      ctx.shadowBlur = 0
+        const areaGradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom)
+        areaGradient.addColorStop(0, 'rgba(57, 255, 136, 0.24)')
+        areaGradient.addColorStop(1, 'rgba(71, 184, 255, 0.02)')
+        ctx.fillStyle = areaGradient
+        ctx.fill()
+      }
 
-      const lastPoint = coords[coords.length - 1]
-      ctx.beginPath()
-      ctx.fillStyle = '#e8fff3'
-      ctx.shadowColor = 'rgba(57, 255, 136, 1)'
-      ctx.shadowBlur = 18
-      ctx.arc(lastPoint.x, lastPoint.y, 4, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.shadowBlur = 0
+      this.drawSeries(ctx, coords, '#4cff95', 'rgba(57, 255, 136, 0.9)')
+      this.drawSeries(ctx, compensatedCoords, '#69c7ff', 'rgba(105, 199, 255, 0.85)')
     }
   }
 }
@@ -283,6 +335,10 @@ export default {
   margin-bottom: 18rpx;
 }
 
+.chart-card__title-block {
+  min-width: 0;
+}
+
 .chart-card__title {
   display: block;
   font-size: 30rpx;
@@ -297,13 +353,58 @@ export default {
   color: rgba(191, 216, 255, 0.65);
 }
 
+.chart-card__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14rpx;
+  margin-top: 14rpx;
+}
+
+.chart-card__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 20rpx;
+  color: rgba(218, 232, 255, 0.72);
+}
+
+.chart-card__legend-swatch {
+  width: 18rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+}
+
+.chart-card__legend-swatch--power {
+  background: #4cff95;
+  box-shadow: 0 0 12rpx rgba(57, 255, 136, 0.58);
+}
+
+.chart-card__legend-swatch--mppt {
+  background: $color-accent-blue-strong;
+  box-shadow: 0 0 12rpx rgba(105, 199, 255, 0.58);
+}
+
+.chart-card__latest-list {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
 .chart-card__latest {
+  display: block;
   font-size: 24rpx;
   color: $color-accent-green;
   white-space: nowrap;
 }
 
-.chart-card__latest--placeholder {
+.chart-card__latest--mppt {
+  color: $color-accent-blue-strong;
+}
+
+.chart-card__latest-list--placeholder .chart-card__latest {
   color: $color-text-placeholder;
 }
 
@@ -348,8 +449,17 @@ export default {
     font-size: 20rpx;
   }
 
+  .chart-card__legend {
+    gap: 10rpx;
+    margin-top: 12rpx;
+  }
+
+  .chart-card__legend-item {
+    font-size: 18rpx;
+  }
+
   .chart-card__latest {
-    font-size: 21rpx;
+    font-size: 20rpx;
   }
 
   .chart-card__plot {
@@ -361,6 +471,10 @@ export default {
 @media screen and (max-width: 360px) {
   .chart-card__header {
     flex-direction: column;
+  }
+
+  .chart-card__latest-list {
+    align-items: flex-start;
   }
 
   .chart-card__plot {

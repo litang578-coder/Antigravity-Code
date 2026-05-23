@@ -26,6 +26,10 @@
           meta="Power Voltage"
           :ready="isDataReady"
           value-class="data-card__value--voltage"
+          secondary-label="MPPT补偿"
+          :secondary-value="Um_comp"
+          secondary-unit="V"
+          :secondary-precision="3"
         />
 
         <metric-card
@@ -37,6 +41,10 @@
           meta="Current Output"
           :ready="isDataReady"
           value-class="data-card__value--current"
+          secondary-label="MPPT补偿"
+          :secondary-value="Im_comp"
+          secondary-unit="A"
+          :secondary-precision="3"
         />
 
         <metric-card
@@ -48,6 +56,17 @@
           meta="Thermal Status"
           :ready="isDataReady"
           :value-class="temperatureColorClass"
+        />
+
+        <metric-card
+          class="card-grid__metric card-grid__metric--efficiency"
+          label="MPPT效率"
+          :value="mpptEfficiency"
+          :precision="1"
+          unit="%"
+          meta="MPPT Efficiency"
+          :ready="isDataReady"
+          value-class="data-card__value--efficiency"
         />
       </view>
 
@@ -62,8 +81,10 @@
 
       <power-chart-card
         :power="currentPower"
+        :compensated-power="mpptPower"
         :is-data-ready="isDataReady"
         :power-history="powerHistory"
+        :compensated-power-history="mpptPowerHistory"
       />
     </view>
   </view>
@@ -104,6 +125,9 @@ export default {
       targetTemp: 25,
       targetCurrent: 0,
       targetVolt: 0,
+      Um_comp: null,
+      Im_comp: null,
+      mpptPower: null,
       battery_soc: null,
       Relay_BAT: false,
       token: '',
@@ -127,7 +151,8 @@ export default {
       isBatteryChannelLoading: false,
       pendingBatteryChannelState: null,
       batteryChannelToggleTimer: null,
-      powerHistory: []
+      powerHistory: [],
+      mpptPowerHistory: []
     }
   },
   computed: {
@@ -136,6 +161,11 @@ export default {
     },
     currentPower() {
       return this.volt * this.current
+    },
+    mpptEfficiency() {
+      const power = this.parseNumericValue(this.mpptPower)
+      if (power === null) return null
+      return (power / 1.98) * 100
     },
     temperatureColorClass() {
       // 使用平滑后的数值来判断颜色，过渡更自然
@@ -508,6 +538,18 @@ export default {
       const power = v * c
       this.powerHistory = this.powerHistory.concat(power).slice(-30)
     },
+    parseNumericValue(value) {
+      if (value === null || value === undefined || value === '') return null
+      const num = Number(value)
+      if (Number.isNaN(num)) return null
+      return num
+    },
+    updateMpptPowerHistory(power) {
+      const nextPower = this.parseNumericValue(power)
+      if (nextPower === null) return
+
+      this.mpptPowerHistory = this.mpptPowerHistory.concat(nextPower).slice(-30)
+    },
     buildDevicePropertyMap(dataList) {
       return dataList.reduce((propertyMap, item) => {
         if (item && item.identifier) {
@@ -560,6 +602,16 @@ export default {
             const curVal = getVal('current')
             this.updatePowerHistory(nextVolt, curVal !== null ? Number(curVal) : this.targetCurrent)
           }
+
+          const umCompVal = getVal('Um_comp')
+          this.Um_comp = this.parseNumericValue(umCompVal)
+
+          const imCompVal = getVal('Im_comp')
+          this.Im_comp = this.parseNumericValue(imCompVal)
+
+          const mpptPowerVal = getVal('power')
+          this.mpptPower = this.parseNumericValue(mpptPowerVal)
+          this.updateMpptPowerHistory(mpptPowerVal)
 
           const batterySocVal = getVal('battery_soc')
           if (batterySocVal !== null) {
@@ -651,14 +703,14 @@ export default {
 @media screen and (min-width: 768px) {
   .dashboard {
     width: 92%;
-    max-width: 920rpx;
+    max-width: 1120rpx;
     margin: 0 auto;
     padding-left: 0;
     padding-right: 0;
   }
 
   .card-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: $space-lg;
   }
 }
@@ -669,8 +721,5 @@ export default {
     padding-right: 22rpx;
   }
 
-  .card-grid__metric--temperature {
-    grid-column: 1 / -1;
-  }
 }
 </style>
