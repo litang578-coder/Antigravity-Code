@@ -1,0 +1,15 @@
+train: ../datas/images/train_img
+val: ../datas/images/train_txt
+test: 
+
+# number of classes
+nc: 1
+
+# class names
+names: [ 'screen' ]
+
+# Print classes
+# with open('data/coco.yaml') as f:
+#   d = yaml.load(f, Loader=yaml.FullLoader)  # dict
+#   for i, x in enumerate(d['names']):
+#     print(i, x)
