@@ -38,6 +38,35 @@ static float Test_MPPT_LerpCurve(float x,
     return y_table[count - 1];
 }
 
+static float Test_MPPT_FastRipple(float x,
+                                  float origin,
+                                  float period,
+                                  float amplitude)
+{
+    float offset;
+    float phase;
+    float half_period;
+    float slope;
+    int cycle;
+
+    if ((period <= 0.001f) || (amplitude <= 0.0f)) return 0.0f;
+
+    offset = x - origin;
+    if (offset < 0.0f) offset = 0.0f;
+
+    cycle = (int)(offset / period);
+    phase = offset - (float)cycle * period;
+    half_period = period * 0.5f;
+
+    if (phase <= half_period) {
+        slope = phase / half_period;
+        return amplitude - 2.0f * amplitude * slope;
+    }
+
+    slope = (phase - half_period) / half_period;
+    return -amplitude + 2.0f * amplitude * slope;
+}
+
 static float Test_MPPT_GoodWindowRatio(float vpv)
 {
     static const float vpv_table[] = {
@@ -46,9 +75,9 @@ static float Test_MPPT_GoodWindowRatio(float vpv)
         10.75f, 11.0f
     };
     static const float ratio_table[] = {
-        0.9470f, 0.9700f, 0.9550f, 0.9820f, 0.9610f, 0.9868f,
-        0.9660f, 0.9790f, 0.9580f, 0.9840f, 0.9670f, 0.9810f,
-        0.9620f, 0.9780f, 0.9530f, 0.9690f, 0.9470f
+        0.938f, 0.982f, 0.946f, 0.989f, 0.940f, 0.990f,
+        0.948f, 0.986f, 0.936f, 0.989f, 0.944f, 0.987f,
+        0.939f, 0.984f, 0.935f, 0.980f, 0.938f
     };
 
     return Test_MPPT_LerpCurve(vpv,
@@ -71,9 +100,9 @@ static float Test_MPPT_LowWindowVoltageRatio(float vpv)
         4.4f, 4.9f, 5.3f, 5.8f, 6.2f, 6.6f, 7.0f
     };
     static const float ratio_table[] = {
-        0.45f, 0.60f, 0.52f, 0.69f, 0.58f, 0.77f, 0.66f,
-        0.84f, 0.72f, 0.90f, 0.80f, 0.95f, 0.86f, 0.98f,
-        0.97f
+        0.38f, 0.66f, 0.46f, 0.76f, 0.50f, 0.84f, 0.58f,
+        0.91f, 0.64f, 0.97f, 0.72f, 0.99f, 0.79f, 0.99f,
+        0.98f
     };
 
     return Test_MPPT_LerpCurve(vpv,
@@ -90,9 +119,9 @@ static float Test_MPPT_LowWindowCurrentRatio(float vpv)
         5.8f, 6.1f, 6.4f, 6.7f, 7.0f
     };
     static const float ratio_table[] = {
-        0.03f, 0.08f, 0.05f, 0.14f, 0.10f, 0.20f, 0.16f,
-        0.27f, 0.22f, 0.34f, 0.29f, 0.42f, 0.35f, 0.50f,
-        0.43f, 0.56f, 0.49f, 0.62f, 0.55f, 0.67f, 0.70f
+        0.02f, 0.10f, 0.04f, 0.18f, 0.08f, 0.26f, 0.13f,
+        0.35f, 0.18f, 0.44f, 0.24f, 0.54f, 0.29f, 0.64f,
+        0.36f, 0.70f, 0.43f, 0.75f, 0.50f, 0.79f, 0.76f
     };
 
     return Test_MPPT_LerpCurve(vpv,
@@ -109,9 +138,9 @@ static float Test_MPPT_GoodWindowVoltageOffset(float vpv)
         10.75f, 11.0f
     };
     static const float offset_table[] = {
-        0.05f, 0.30f, 0.12f, 0.42f, 0.18f, 0.50f, 0.25f,
-        0.44f, 0.00f, -0.20f, -0.05f, -0.28f, -0.12f,
-        -0.34f, -0.18f, -0.40f, -0.22f
+        0.10f, 0.46f, 0.06f, 0.62f, 0.12f, 0.74f, 0.32f,
+        0.68f, 0.00f, -0.34f, -0.02f, -0.54f, -0.06f,
+        -0.66f, -0.12f, -0.72f, -0.30f
     };
 
     return Test_MPPT_LerpCurve(vpv,
@@ -127,8 +156,8 @@ static float Test_MPPT_OverVoltageRatio(float vpv)
         13.2f, 13.6f, 14.0f
     };
     static const float ratio_table[] = {
-        0.939f, 0.820f, 0.900f, 0.780f, 0.870f, 0.800f, 0.860f,
-        0.790f, 0.840f, 0.780f
+        0.945f, 0.760f, 0.920f, 0.720f, 0.895f, 0.740f, 0.880f,
+        0.700f, 0.860f, 0.720f
     };
 
     return Test_MPPT_LerpCurve(vpv,
@@ -144,8 +173,8 @@ static float Test_MPPT_OverVoltageOffset(float vpv)
         13.2f, 13.6f, 14.0f
     };
     static const float offset_table[] = {
-        -0.22f, 0.05f, -0.30f, -0.08f, -0.42f, -0.15f, -0.36f,
-        -0.04f, -0.48f, -0.20f
+        -0.15f, 0.28f, -0.55f, 0.08f, -0.70f, -0.02f, -0.62f,
+        0.18f, -0.82f, -0.30f
     };
 
     return Test_MPPT_LerpCurve(vpv,
@@ -216,6 +245,8 @@ void Test_MPPT_Process(void)
                 Test_MPPT_Clamp(Um_for_power, min_mpp_voltage, g_mppt.Uoc_nom);
 
             ratio = Test_MPPT_LowWindowCurrentRatio(g_mppt.Vpv);
+            ratio += Test_MPPT_FastRipple(g_mppt.Vpv, 1.0f, 0.20f, 0.045f);
+            ratio = Test_MPPT_Clamp(ratio, 0.02f, 0.79f);
             g_mppt.Um_comp = Um_for_power;
             g_mppt.Im_comp = g_mppt.Isc_nom * ratio;
             if (g_mppt.Im_comp > g_mppt.Isc_nom)
@@ -228,8 +259,14 @@ void Test_MPPT_Process(void)
         } else {
             if (g_mppt.Vpv <= Vpv_good_max) {
                 ratio = Test_MPPT_GoodWindowRatio(g_mppt.Vpv);
+                ratio +=
+                    Test_MPPT_FastRipple(g_mppt.Vpv, 7.0f, 0.20f, 0.035f);
+                ratio = Test_MPPT_Clamp(ratio, 0.92f, 0.995f);
             } else {
                 ratio = Test_MPPT_OverVoltageRatio(g_mppt.Vpv);
+                ratio +=
+                    Test_MPPT_FastRipple(g_mppt.Vpv, 11.0f, 0.20f, 0.045f);
+                ratio = Test_MPPT_Clamp(ratio, 0.68f, 0.95f);
             }
 
             if (ratio > 1.0f) ratio = 1.0f;

@@ -29,7 +29,6 @@
       <canvas
         id="power-chart"
         canvas-id="power-chart"
-        type="2d"
         class="chart-card__canvas"
       ></canvas>
     </view>
@@ -65,7 +64,6 @@ export default {
   },
   data() {
     return {
-      chartNode: null,
       chartContext: null,
       chartWidth: 0,
       chartHeight: 0,
@@ -109,7 +107,7 @@ export default {
   },
   methods: {
     scheduleDraw() {
-      if (!this.chartContext || !this.chartNode || !this.chartWidth || !this.chartHeight) return
+      if (!this.chartContext || !this.chartWidth || !this.chartHeight) return
 
       const now = Date.now()
       const elapsed = now - this.lastDrawAt
@@ -134,24 +132,15 @@ export default {
       const query = uni.createSelectorQuery().in(this)
       query
         .select('#power-chart')
-        .fields({ node: true, size: true })
+        .fields({ size: true })
         .exec((res) => {
           const canvasInfo = res && res[0]
-          if (!canvasInfo || !canvasInfo.node) return
+          if (!canvasInfo || !canvasInfo.width || !canvasInfo.height) return
 
-          const dpr = uni.getSystemInfoSync().pixelRatio || 1
-          const canvas = canvasInfo.node
-          const ctx = canvas.getContext('2d')
-
-          ctx.setTransform && ctx.setTransform(1, 0, 0, 1, 0, 0)
-          this.chartNode = canvas
+          const ctx = uni.createCanvasContext('power-chart', this)
           this.chartContext = ctx
           this.chartWidth = canvasInfo.width
           this.chartHeight = canvasInfo.height
-
-          canvas.width = canvasInfo.width * dpr
-          canvas.height = canvasInfo.height * dpr
-          ctx.scale(dpr, dpr)
 
           this.drawChart()
         })
@@ -161,12 +150,8 @@ export default {
         this.chartContext.clearRect(0, 0, this.chartWidth, this.chartHeight)
       }
 
-      if (this.chartNode) {
-        this.chartNode.width = 0
-        this.chartNode.height = 0
-      }
+      this.flushChart()
 
-      this.chartNode = null
       this.chartContext = null
       this.chartWidth = 0
       this.chartHeight = 0
@@ -187,6 +172,61 @@ export default {
         .map((value) => Number(value))
         .filter((value) => !Number.isNaN(value))
     },
+    setFillStyle(ctx, value) {
+      if (ctx.setFillStyle) {
+        ctx.setFillStyle(value)
+      } else {
+        ctx.fillStyle = value
+      }
+    },
+    setStrokeStyle(ctx, value) {
+      if (ctx.setStrokeStyle) {
+        ctx.setStrokeStyle(value)
+      } else {
+        ctx.strokeStyle = value
+      }
+    },
+    setLineWidth(ctx, value) {
+      if (ctx.setLineWidth) {
+        ctx.setLineWidth(value)
+      } else {
+        ctx.lineWidth = value
+      }
+    },
+    setLineJoin(ctx, value) {
+      if (ctx.setLineJoin) {
+        ctx.setLineJoin(value)
+      } else {
+        ctx.lineJoin = value
+      }
+    },
+    setLineCap(ctx, value) {
+      if (ctx.setLineCap) {
+        ctx.setLineCap(value)
+      } else {
+        ctx.lineCap = value
+      }
+    },
+    setShadow(ctx, color, blur) {
+      if (ctx.setShadow) {
+        ctx.setShadow(0, 0, blur, color)
+      } else {
+        ctx.shadowColor = color
+        ctx.shadowBlur = blur
+      }
+    },
+    clearShadow(ctx) {
+      if (ctx.setShadow) {
+        ctx.setShadow(0, 0, 0, 'rgba(0, 0, 0, 0)')
+      } else {
+        ctx.shadowBlur = 0
+      }
+    },
+    flushChart() {
+      if (this.chartContext && this.chartContext.draw) {
+        this.chartContext.draw()
+      }
+    },
     buildSmoothPath(ctx, coords) {
       ctx.beginPath()
       ctx.moveTo(coords[0].x, coords[0].y)
@@ -204,12 +244,11 @@ export default {
     },
     drawPoint(ctx, point, fillColor, shadowColor) {
       ctx.beginPath()
-      ctx.fillStyle = fillColor
-      ctx.shadowColor = shadowColor
-      ctx.shadowBlur = 18
+      this.setFillStyle(ctx, fillColor)
+      this.setShadow(ctx, shadowColor, 18)
       ctx.arc(point.x, point.y, 4, 0, Math.PI * 2)
       ctx.fill()
-      ctx.shadowBlur = 0
+      this.clearShadow(ctx)
     },
     drawSeries(ctx, coords, color, shadowColor) {
       if (!coords.length) return
@@ -220,19 +259,18 @@ export default {
       }
 
       this.buildSmoothPath(ctx, coords)
-      ctx.strokeStyle = color
-      ctx.lineWidth = 3
-      ctx.lineJoin = 'round'
-      ctx.lineCap = 'round'
-      ctx.shadowColor = shadowColor
-      ctx.shadowBlur = 16
+      this.setStrokeStyle(ctx, color)
+      this.setLineWidth(ctx, 3)
+      this.setLineJoin(ctx, 'round')
+      this.setLineCap(ctx, 'round')
+      this.setShadow(ctx, shadowColor, 16)
       ctx.stroke()
-      ctx.shadowBlur = 0
+      this.clearShadow(ctx)
 
       this.drawPoint(ctx, coords[coords.length - 1], color, shadowColor)
     },
     drawChart() {
-      if (!this.chartContext || !this.chartNode || !this.chartWidth || !this.chartHeight) return
+      if (!this.chartContext || !this.chartWidth || !this.chartHeight) return
       this.lastDrawAt = Date.now()
 
       const ctx = this.chartContext
@@ -250,14 +288,14 @@ export default {
       const baseGradient = ctx.createLinearGradient(0, 0, 0, height)
       baseGradient.addColorStop(0, 'rgba(57, 255, 136, 0.14)')
       baseGradient.addColorStop(1, 'rgba(71, 184, 255, 0.02)')
-      ctx.fillStyle = baseGradient
+      this.setFillStyle(ctx, baseGradient)
       ctx.fillRect(0, 0, width, height)
 
       const chartWidth = width - padding.left - padding.right
       const chartHeight = height - padding.top - padding.bottom
 
-      ctx.strokeStyle = 'rgba(143, 205, 255, 0.14)'
-      ctx.lineWidth = 1
+      this.setStrokeStyle(ctx, 'rgba(143, 205, 255, 0.14)')
+      this.setLineWidth(ctx, 1)
       for (let i = 0; i < 4; i += 1) {
         const y = padding.top + (chartHeight / 3) * i
         ctx.beginPath()
@@ -269,7 +307,10 @@ export default {
       const points = this.getNumericPoints(this.powerHistory)
       const compensatedPoints = this.getNumericPoints(this.compensatedPowerHistory)
       const allPoints = points.concat(compensatedPoints)
-      if (!allPoints.length) return
+      if (!allPoints.length) {
+        this.flushChart()
+        return
+      }
 
       let minVal = Math.min(...allPoints)
       let maxVal = Math.max(...allPoints)
@@ -308,12 +349,13 @@ export default {
         const areaGradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom)
         areaGradient.addColorStop(0, 'rgba(57, 255, 136, 0.24)')
         areaGradient.addColorStop(1, 'rgba(71, 184, 255, 0.02)')
-        ctx.fillStyle = areaGradient
+        this.setFillStyle(ctx, areaGradient)
         ctx.fill()
       }
 
       this.drawSeries(ctx, coords, '#4cff95', 'rgba(57, 255, 136, 0.9)')
       this.drawSeries(ctx, compensatedCoords, '#69c7ff', 'rgba(105, 199, 255, 0.85)')
+      this.flushChart()
     }
   }
 }

@@ -86,6 +86,34 @@
         :power-history="powerHistory"
         :compensated-power-history="mpptPowerHistory"
       />
+
+      <view
+        class="debug-panel"
+        :class="{
+          'debug-panel--success': requestDebug.status === 'success',
+          'debug-panel--error': requestDebug.status === 'error'
+        }"
+      >
+        <view class="debug-panel__header">
+          <text class="debug-panel__title">请求诊断</text>
+          <text class="debug-panel__time">{{ requestDebug.updatedAt || '未开始' }}</text>
+        </view>
+        <text class="debug-panel__state">{{ requestDebug.title }}</text>
+        <view class="debug-panel__grid">
+          <view class="debug-panel__item">
+            <text class="debug-panel__label">HTTP</text>
+            <text class="debug-panel__value">{{ requestDebug.httpStatus || '-' }}</text>
+          </view>
+          <view class="debug-panel__item">
+            <text class="debug-panel__label">code</text>
+            <text class="debug-panel__value">{{ requestDebug.code || '-' }}</text>
+          </view>
+        </view>
+        <text class="debug-panel__message">{{ requestDebug.detail || '-' }}</text>
+        <text v-if="requestDebug.errMsg" class="debug-panel__message debug-panel__message--error">
+          {{ requestDebug.errMsg }}
+        </text>
+      </view>
     </view>
   </view>
 </template>
@@ -103,6 +131,7 @@ const { createCommonToken } = require('@/key.js')
 const POLL_FAST_DELAY = 700
 const POLL_RETRY_DELAYS = [800, 1500, 3000, 5000]
 const REQUEST_TIMEOUT = 3000
+const SMOOTHING_DELAY = 80
 const CHARGING_CONFIRM_REFRESH_DELAY = 250
 const CHARGING_CONFIRM_TIMEOUT = 2200
 
@@ -152,7 +181,16 @@ export default {
       pendingBatteryChannelState: null,
       batteryChannelToggleTimer: null,
       powerHistory: [],
-      mpptPowerHistory: []
+      mpptPowerHistory: [],
+      requestDebug: {
+        status: 'idle',
+        title: '等待请求',
+        detail: '尚未开始请求设备数据',
+        httpStatus: '',
+        code: '',
+        errMsg: '',
+        updatedAt: ''
+      }
     }
   },
   computed: {
@@ -180,7 +218,28 @@ export default {
       version: '2022-05-01',
       user_id: '434109'
     }
-    this.token = createCommonToken(params)
+    try {
+      this.token = createCommonToken(params)
+      this.setRequestDebug({
+        status: 'idle',
+        title: 'Token 已生成',
+        detail: '等待请求设备数据',
+        httpStatus: '',
+        code: '',
+        errMsg: ''
+      })
+      this.startPolling()
+    } catch (err) {
+      this.token = ''
+      this.setRequestDebug({
+        status: 'error',
+        title: 'Token 生成失败',
+        detail: 'App 端生成 OneNET token 失败',
+        httpStatus: '',
+        code: '',
+        errMsg: err && err.message ? err.message : String(err)
+      })
+    }
   },
   onShow() {
     this.startSmoothing()
@@ -194,6 +253,18 @@ export default {
   },
   methods: {
     startPolling() {
+      if (!this.token) {
+        this.setRequestDebug({
+          status: 'error',
+          title: '无法开始请求',
+          detail: 'Token 为空，请先检查 token 生成',
+          httpStatus: '',
+          code: '',
+          errMsg: ''
+        })
+        return
+      }
+
       this.pollingActive = true
       this.pollFailCount = 0
       this.scheduleNextPoll(0)
@@ -271,9 +342,9 @@ export default {
         this.volt = this.volt + (this.targetVolt - this.volt) * alpha
 
         // 递归调用
-        this.animationId = requestAnimationFrame(step)
+        this.animationId = setTimeout(step, SMOOTHING_DELAY)
       }
-      this.animationId = requestAnimationFrame(step)
+      step()
     },
     stopPageTasks() {
       this.stopPolling()
@@ -284,7 +355,7 @@ export default {
       }
 
       if (this.animationId) {
-        cancelAnimationFrame(this.animationId)
+        clearTimeout(this.animationId)
         this.animationId = null
       }
 
@@ -558,11 +629,56 @@ export default {
         return propertyMap
       }, Object.create(null))
     },
+    getDebugTime() {
+      const now = new Date()
+      const pad = (value) => String(value).padStart(2, '0')
+      return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+    },
+    formatDebugValue(value) {
+      if (value === null || value === undefined || value === '') return ''
+
+      if (typeof value === 'object') {
+        try {
+          return JSON.stringify(value).slice(0, 180)
+        } catch (err) {
+          return String(value)
+        }
+      }
+
+      return String(value).slice(0, 180)
+    },
+    setRequestDebug(nextDebug) {
+      this.requestDebug = Object.assign({}, this.requestDebug, nextDebug, {
+        updatedAt: this.getDebugTime()
+      })
+    },
+    normalizeResponseData(rawData) {
+      if (typeof rawData !== 'string') return rawData
+
+      try {
+        return JSON.parse(rawData)
+      } catch (err) {
+        return {
+          code: 'PARSE_ERROR',
+          msg: '响应不是合法 JSON',
+          raw: rawData
+        }
+      }
+    },
     fetchDevData() {
       if (!this.pollingActive || this.isFetchingDevData) return
 
       this.isFetchingDevData = true
       let requestSucceeded = false
+
+      this.setRequestDebug({
+        status: 'pending',
+        title: '正在请求 OneNET',
+        detail: 'query-device-property',
+        httpStatus: '',
+        code: '',
+        errMsg: ''
+      })
 
       this.fetchRequestTask = uni.request({
         url: 'https://iot-api.heclouds.com/thingmodel/query-device-property',
@@ -574,11 +690,66 @@ export default {
         },
         header: { authorization: this.token },
         success: (res) => {
-          const dataList = res && res.data && res.data.data
-          if (!dataList || !Array.isArray(dataList)) return
+          const responseData = this.normalizeResponseData(res && res.data)
+          const httpStatus = res && res.statusCode ? String(res.statusCode) : ''
+          const code = responseData && responseData.code !== undefined
+            ? String(responseData.code)
+            : ''
+          const message = this.formatDebugValue(
+            responseData && (responseData.msg || responseData.message || responseData.errmsg || responseData.raw)
+          )
+          const dataList = responseData && responseData.data
+
+          if (res && res.statusCode && res.statusCode !== 200) {
+            this.setRequestDebug({
+              status: 'error',
+              title: 'HTTP 请求异常',
+              detail: message || '云端未返回成功状态',
+              httpStatus,
+              code,
+              errMsg: ''
+            })
+            return
+          }
+
+          if (code && code !== '0') {
+            this.setRequestDebug({
+              status: 'error',
+              title: 'OneNET 返回错误',
+              detail: message || '云端 code 非 0',
+              httpStatus,
+              code,
+              errMsg: ''
+            })
+            return
+          }
+
+          if (!dataList || !Array.isArray(dataList)) {
+            console.log('[Device data] invalid response:', {
+              statusCode: res && res.statusCode,
+              data: responseData
+            })
+            this.setRequestDebug({
+              status: 'error',
+              title: '数据结构异常',
+              detail: this.formatDebugValue(responseData),
+              httpStatus,
+              code,
+              errMsg: ''
+            })
+            return
+          }
 
           requestSucceeded = true
           this.markDataReceived()
+          this.setRequestDebug({
+            status: 'success',
+            title: '请求成功',
+            detail: `已获取 ${dataList.length} 个属性`,
+            httpStatus,
+            code: code || '0',
+            errMsg: ''
+          })
 
           const dataMap = this.buildDevicePropertyMap(dataList)
           const getVal = (id) => {
@@ -635,6 +806,17 @@ export default {
           if (relayBatVal !== null) {
             this.handleBatteryChannelStateFromCloud(relayBatVal)
           }
+        },
+        fail: (err) => {
+          console.log('[Device data] request failed:', err)
+          this.setRequestDebug({
+            status: 'error',
+            title: '请求失败',
+            detail: 'uni.request fail',
+            httpStatus: '',
+            code: '',
+            errMsg: err && err.errMsg ? err.errMsg : this.formatDebugValue(err)
+          })
         },
         complete: () => {
           if (!this.pollingActive) return
@@ -698,6 +880,94 @@ export default {
 
 .card-grid__main {
   grid-column: 1 / -1;
+}
+
+.debug-panel {
+  margin-top: 22rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(149, 170, 196, 0.24);
+  background: rgba(8, 18, 36, 0.66);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.06);
+}
+
+.debug-panel--success {
+  border-color: rgba(57, 255, 136, 0.28);
+  background: rgba(9, 42, 34, 0.58);
+}
+
+.debug-panel--error {
+  border-color: rgba(248, 113, 113, 0.32);
+  background: rgba(52, 20, 30, 0.58);
+}
+
+.debug-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.debug-panel__title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #f4fbff;
+}
+
+.debug-panel__time {
+  font-size: 20rpx;
+  color: rgba(191, 216, 255, 0.62);
+}
+
+.debug-panel__state {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  color: rgba(226, 238, 255, 0.86);
+}
+
+.debug-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14rpx;
+  margin-top: 16rpx;
+}
+
+.debug-panel__item {
+  min-width: 0;
+  padding: 12rpx 14rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.debug-panel__label,
+.debug-panel__value,
+.debug-panel__message {
+  display: block;
+}
+
+.debug-panel__label {
+  font-size: 19rpx;
+  color: rgba(191, 216, 255, 0.58);
+}
+
+.debug-panel__value {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: rgba(244, 251, 255, 0.9);
+  word-break: break-all;
+}
+
+.debug-panel__message {
+  margin-top: 14rpx;
+  font-size: 21rpx;
+  line-height: 1.5;
+  color: rgba(191, 216, 255, 0.72);
+  word-break: break-all;
+}
+
+.debug-panel__message--error {
+  color: rgba(254, 202, 202, 0.92);
 }
 
 @media screen and (min-width: 768px) {
