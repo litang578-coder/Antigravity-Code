@@ -1,0 +1,54 @@
+# ==========================================
+# HBuilderX / uni-app / Frontend Build Artifacts
+# ==========================================
+**/APP_2/.hbuilderx/
+**/APP_2/unpackage/
+**/APP_2/node_modules/
+**/APP_2/dist/
+
+# ==========================================
+# Keil MDK / STM32 Build Artifacts & Caches
+# ==========================================
+# Keil intermediate compilation files
+*.bak
+*.ddk
+*.edk
+*.lst
+*.lnp
+*.mpf
+*.mpj
+*.obj
+*.omf
+*.plg
+*.rpt
+*.tmp
+*.__i
+*.crf
+*.o
+*.d
+*.tra
+*.dep
+*.iex
+*.htm
+*.sct
+*.map
+JLinkLog.txt
+
+# Keil configuration / local settings files
+*.uvgui.*
+*.uvguix.*
+*.uvopt
+*.uvoptx
+
+# Target output directories
+**/OBJ/
+**/Objects/
+**/Listings/
+
+# ==========================================
+# General OS / IDE Caches
+# ==========================================
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
