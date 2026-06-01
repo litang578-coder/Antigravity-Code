@@ -2,37 +2,40 @@
 	************************************************************
 	************************************************************
 	************************************************************
-	*	�ļ����� 	onenet.c
+	*	锟侥硷拷锟斤拷锟斤拷 	onenet.c
 	*
-	*	���ߣ� 		�ż���
+	*	锟斤拷锟竭ｏ拷 		锟脚硷拷锟斤拷
 	*
-	*	���ڣ� 		2017-05-08
+	*	锟斤拷锟节ｏ拷 		2017-05-08
 	*
-	*	�汾�� 		V1.1
+	*	锟芥本锟斤拷 		V1.1
 	*
-	*	˵���� 		��onenetƽ̨�����ݽ����ӿڲ�
+	*	说锟斤拷锟斤拷 		锟斤拷onenet平台锟斤拷锟斤拷锟捷斤拷锟斤拷锟接口诧拷
 	*
-	*	�޸ļ�¼��	V1.0��Э���װ�������ж϶����һ���ļ������Ҳ�ͬЭ��ӿڲ����
-	*				V1.1���ṩͳһ�ӿڹ�Ӧ�ò�ʹ�ã����ݲ�ͬЭ���ļ�����װЭ����ص����ݡ�?
+	*	锟睫改硷拷录锟斤拷	V1.0锟斤拷协锟斤拷锟阶帮拷锟斤拷锟斤拷锟斤拷卸隙锟斤拷锟酵一锟斤拷锟侥硷拷锟斤拷锟斤拷锟揭诧拷同协锟斤拷涌诓锟酵锟斤拷
+	*				V1.1锟斤拷锟结供统一锟接口癸拷应锟矫诧拷使锟矫ｏ拷锟斤拷锟捷诧拷同协锟斤拷锟侥硷拷锟斤拷锟斤拷装协锟斤拷锟斤拷氐锟斤拷锟斤拷荨锟?
 	************************************************************
 	************************************************************
 	************************************************************
 **/
 
-// ��Ƭ��ͷ�ļ�������STM32F10xϵ�е����趨��
+// 锟斤拷片锟斤拷头锟侥硷拷锟斤拷锟斤拷锟斤拷STM32F10x系锟叫碉拷锟斤拷锟借定锟斤拷
 #include "stm32f10x.h"
 
-//�����豸
+//锟斤拷锟斤拷锟借备
 #include "esp8266.h"
+#include "OLED.h"
 
-//Э���ļ�
+#define ESP8266_ONENET_INFO "AT+CIPSTART=\"TCP\",\"mqtts.heclouds.com\",1883\r\n"
+
+//协锟斤拷锟侥硷拷
 #include "mqttkit.h"
 #include "usart.h"
 #include "mqttkit.h"
 //#include "led.h"
 //#include "brace_control.h"	
 
-//�㷨
+//锟姐法
 #include "base64.h"
 #include "hmac_sha1.h"
 #include "cJSON.h"
@@ -45,7 +48,7 @@ extern uint8_t g_battery_soc_upload;
 //#include "GUI.h"
 //#include "Lcd_Driver.h"
 
-//C��
+//C锟斤拷
 #include <string.h>
 #include <stdio.h>
 
@@ -63,30 +66,30 @@ char devid[16];
 
 char key[48];
 
-// ����ȫ�ֱ��� (���ѡ����� onenet.c)
-_Bool g_braces_up_status = 0; // Ĭ��Ϊ false (ֹͣ)
-_Bool g_braces_down_status = 0; // Ĭ��Ϊ false (ֹͣ)
+// 锟斤拷锟斤拷全锟街憋拷锟斤拷 (锟斤拷锟窖★拷锟斤拷锟斤拷 onenet.c)
+_Bool g_braces_up_status = 0; // 默锟斤拷为 false (停止)
+_Bool g_braces_down_status = 0; // 默锟斤拷为 false (停止)
 
 extern unsigned char esp8266_buf[512];
-// �� main.c �����Ĵ�����/����ֵ
+// 锟斤拷 main.c 锟斤拷锟斤拷锟侥达拷锟斤拷锟斤拷/锟斤拷锟斤拷值
 extern float volt;
 extern float current;
-extern uint8_t g_battery_soc_upload;  // ���SOC��0~100������main.c����
+extern uint8_t g_battery_soc_upload;  // 电池SOC（0~100），由main.c更新
 extern float temp;
 //extern u8 control_flag;
 //extern uint32_t b_control,speed,heart_rate,steps;
 /*
 ************************************************************
-*	�������ƣ�	OTA_UrlEncode
+*	锟斤拷锟斤拷锟斤拷锟狡ｏ拷	OTA_UrlEncode
 *
-*	�������ܣ�	sign��Ҫ����URL����
+*	锟斤拷锟斤拷锟斤拷锟杰ｏ拷	sign锟斤拷要锟斤拷锟斤拷URL锟斤拷锟斤拷
 *
-*	��ڲ�����?sign�����ܽ��?
+*	锟斤拷诓锟斤拷锟斤拷锟?sign锟斤拷锟斤拷锟杰斤拷锟?
 *
-*	���ز�����	0-�ɹ�	����-ʧ��
+*	锟斤拷锟截诧拷锟斤拷锟斤拷	0-锟缴癸拷	锟斤拷锟斤拷-失锟斤拷
 *
-*	˵����		+			%2B
-*				�ո�		%20
+*	说锟斤拷锟斤拷		+			%2B
+*				锟秸革拷		%20
 *				/			%2F
 *				?			%3F
 *				%			%25
@@ -162,21 +165,21 @@ static unsigned char OTA_UrlEncode(char *sign)
 
 /*
 ************************************************************
-*	�������ƣ�	OTA_Authorization
+*	锟斤拷锟斤拷锟斤拷锟狡ｏ拷	OTA_Authorization
 *
-*	�������ܣ�	����Authorization
+*	锟斤拷锟斤拷锟斤拷锟杰ｏ拷	锟斤拷锟斤拷Authorization
 *
-*	��ڲ�����?ver��������汾�ţ����ڸ�ʽ��Ŀǰ��֧�ָ��?2018-10-31"
-*				res����Ʒid
-*				et������ʱ�䣬UTC��ֵ
-*				access_key��������Կ
-*				dev_name���豸��
-*				authorization_buf������token��ָ��
-*				authorization_buf_len������������(�ֽ�)
+*	锟斤拷诓锟斤拷锟斤拷锟?ver锟斤拷锟斤拷锟斤拷锟斤拷姹撅拷牛锟斤拷锟斤拷诟锟绞斤拷锟侥壳帮拷锟街э拷指锟绞?2018-10-31"
+*				res锟斤拷锟斤拷品id
+*				et锟斤拷锟斤拷锟斤拷时锟戒，UTC锟斤拷值
+*				access_key锟斤拷锟斤拷锟斤拷锟斤拷钥
+*				dev_name锟斤拷锟借备锟斤拷
+*				authorization_buf锟斤拷锟斤拷锟斤拷token锟斤拷指锟斤拷
+*				authorization_buf_len锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷(锟街斤拷)
 *
-*	���ز�����	0-�ɹ�	����-ʧ��
+*	锟斤拷锟截诧拷锟斤拷锟斤拷	0-锟缴癸拷	锟斤拷锟斤拷-失锟斤拷
 *
-*	˵����		��ǰ��֧��sha1
+*	说锟斤拷锟斤拷		锟斤拷前锟斤拷支锟斤拷sha1
 ************************************************************
 */
 #define METHOD		"sha1"
@@ -186,22 +189,22 @@ static unsigned char OneNET_Authorization(char *ver, char *res, unsigned int et,
 	
 	size_t olen = 0;
 	
-	char sign_buf[64];								//����ǩ����Base64������ �� URL������
-	char hmac_sha1_buf[64];							//����ǩ��
-	char access_key_base64[64];						//����access_key��Base64������
-	char string_for_signature[72];					//����string_for_signature������Ǽ��ܵ�key
+	char sign_buf[64];								//锟斤拷锟斤拷签锟斤拷锟斤拷Base64锟斤拷锟斤拷锟斤拷 锟斤拷 URL锟斤拷锟斤拷锟斤拷
+	char hmac_sha1_buf[64];							//锟斤拷锟斤拷签锟斤拷
+	char access_key_base64[64];						//锟斤拷锟斤拷access_key锟斤拷Base64锟斤拷锟斤拷锟斤拷
+	char string_for_signature[72];					//锟斤拷锟斤拷string_for_signature锟斤拷锟斤拷锟斤拷羌锟斤拷艿锟絢ey
 
-//----------------------------------------------------�����Ϸ���--------------------------------------------------------------------
+//----------------------------------------------------锟斤拷锟斤拷锟较凤拷锟斤拷--------------------------------------------------------------------
 	if(ver == (void *)0 || res == (void *)0 || et < 1564562581 || access_key == (void *)0
 		|| authorization_buf == (void *)0 || authorization_buf_len < 120)
 		return 1;
 	
-//----------------------------------------------------��access_key����Base64����----------------------------------------------------
+//----------------------------------------------------锟斤拷access_key锟斤拷锟斤拷Base64锟斤拷锟斤拷----------------------------------------------------
 	memset(access_key_base64, 0, sizeof(access_key_base64));
 	BASE64_Decode((unsigned char *)access_key_base64, sizeof(access_key_base64), &olen, (unsigned char *)access_key, strlen(access_key));
 //	UsartPrintf(USART_DEBUG, "access_key_base64: %s\r\n", access_key_base64);
 	
-//----------------------------------------------------����string_for_signature-----------------------------------------------------
+//----------------------------------------------------锟斤拷锟斤拷string_for_signature-----------------------------------------------------
 	memset(string_for_signature, 0, sizeof(string_for_signature));
 	if(flag)
 		snprintf(string_for_signature, sizeof(string_for_signature), "%d\n%s\nproducts/%s\n%s", et, METHOD, res, ver);
@@ -209,7 +212,7 @@ static unsigned char OneNET_Authorization(char *ver, char *res, unsigned int et,
 		snprintf(string_for_signature, sizeof(string_for_signature), "%d\n%s\nproducts/%s/devices/%s\n%s", et, METHOD, res, dev_name, ver);
 //	UsartPrintf(USART_DEBUG, "string_for_signature: %s\r\n", string_for_signature);
 	
-//----------------------------------------------------����-------------------------------------------------------------------------
+//----------------------------------------------------锟斤拷锟斤拷-------------------------------------------------------------------------
 	memset(hmac_sha1_buf, 0, sizeof(hmac_sha1_buf));
 	
 	hmac_sha1((unsigned char *)access_key_base64, strlen(access_key_base64),
@@ -218,16 +221,16 @@ static unsigned char OneNET_Authorization(char *ver, char *res, unsigned int et,
 	
 //	UsartPrintf(USART_DEBUG, "hmac_sha1_buf: %s\r\n", hmac_sha1_buf);
 	
-//----------------------------------------------------�����ܽ������Base64����------------------------------------------------------
+//----------------------------------------------------锟斤拷锟斤拷锟杰斤拷锟斤拷锟斤拷锟紹ase64锟斤拷锟斤拷------------------------------------------------------
 	olen = 0;
 	memset(sign_buf, 0, sizeof(sign_buf));
 	BASE64_Encode((unsigned char *)sign_buf, sizeof(sign_buf), &olen, (unsigned char *)hmac_sha1_buf, strlen(hmac_sha1_buf));
 
-//----------------------------------------------------��Base64����������URL����---------------------------------------------------
+//----------------------------------------------------锟斤拷Base64锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷URL锟斤拷锟斤拷---------------------------------------------------
 	OTA_UrlEncode(sign_buf);
 //	UsartPrintf(USART_DEBUG, "sign_buf: %s\r\n", sign_buf);
 	
-//----------------------------------------------------����Token--------------------------------------------------------------------
+//----------------------------------------------------锟斤拷锟斤拷Token--------------------------------------------------------------------
 	if(flag)
 		snprintf(authorization_buf, authorization_buf_len, "version=%s&res=products%%2F%s&et=%d&method=%s&sign=%s", ver, res, et, METHOD, sign_buf);
 	else
@@ -239,19 +242,19 @@ static unsigned char OneNET_Authorization(char *ver, char *res, unsigned int et,
 }
 
 //==========================================================
-//	�������ƣ�	OneNET_RegisterDevice
+//	锟斤拷锟斤拷锟斤拷锟狡ｏ拷	OneNET_RegisterDevice
 //
-//	�������ܣ�	�ڲ�Ʒ��ע��һ���豸
+//	锟斤拷锟斤拷锟斤拷锟杰ｏ拷	锟节诧拷品锟斤拷注锟斤拷一锟斤拷锟借备
 //
-//	��ڲ�����?access_key��������Կ
-//				pro_id����ƷID
-//				serial��Ψһ�豸��
-//				devid�����淵�ص�devid
-//				key�����淵�ص�key
+//	锟斤拷诓锟斤拷锟斤拷锟?access_key锟斤拷锟斤拷锟斤拷锟斤拷钥
+//				pro_id锟斤拷锟斤拷品ID
+//				serial锟斤拷唯一锟借备锟斤拷
+//				devid锟斤拷锟斤拷锟芥返锟截碉拷devid
+//				key锟斤拷锟斤拷锟芥返锟截碉拷key
 //
-//	���ز�����	0-�ɹ�		1-ʧ��
+//	锟斤拷锟截诧拷锟斤拷锟斤拷	0-锟缴癸拷		1-失锟斤拷
 //
-//	˵����		
+//	说锟斤拷锟斤拷		
 //==========================================================
 _Bool OneNET_RegisterDevice(void)
 {
@@ -260,7 +263,7 @@ _Bool OneNET_RegisterDevice(void)
 	unsigned short send_len = 11 + strlen(DEVICE_NAME);
 	char *send_ptr = NULL, *data_ptr = NULL;
 	
-	char authorization_buf[144];													//���ܵ�key
+	char authorization_buf[144];													//锟斤拷锟杰碉拷key
 	
 	send_ptr = malloc(send_len + 240);
 	if(send_ptr == NULL)
@@ -299,7 +302,7 @@ _Bool OneNET_RegisterDevice(void)
 	}
 	*/
 	
-	data_ptr = (char *)ESP8266_GetIPD(250);							//�ȴ�ƽ̨��Ӧ
+	data_ptr = (char *)ESP8266_GetIPD(250);							//锟饺达拷平台锟斤拷应
 	
 	if(data_ptr)
 	{
@@ -326,20 +329,20 @@ _Bool OneNET_RegisterDevice(void)
 }
 
 //==========================================================
-//	�������ƣ�	OneNet_DevLink
+//	锟斤拷锟斤拷锟斤拷锟狡ｏ拷	OneNet_DevLink
 //
-//	�������ܣ�	��onenet��������
+//	锟斤拷锟斤拷锟斤拷锟杰ｏ拷	锟斤拷onenet锟斤拷锟斤拷锟斤拷锟斤拷
 //
-//	��ڲ�����?��
+//	锟斤拷诓锟斤拷锟斤拷锟?锟斤拷
 //
-//	���ز�����	1-�ɹ�	0-ʧ��
+//	锟斤拷锟截诧拷锟斤拷锟斤拷	1-锟缴癸拷	0-失锟斤拷
 //
-//	˵����		��onenetƽ̨��������
+//	说锟斤拷锟斤拷		锟斤拷onenet平台锟斤拷锟斤拷锟斤拷锟斤拷
 //==========================================================
 _Bool OneNet_DevLink(void)
 {
 	
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};					//Э���?
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};					//协锟斤拷锟?
 
 	unsigned char *dataPtr;
 	
@@ -356,29 +359,29 @@ _Bool OneNet_DevLink(void)
 	
 	if(MQTT_PacketConnect(PROID, authorization_buf, DEVICE_NAME, 128, 1, MQTT_QOS_LEVEL0, NULL, NULL, 0, &mqttPacket) == 0)
 	{
-		ESP8266_SendData(mqttPacket._data, mqttPacket._len);			//�ϴ�ƽ̨
+		ESP8266_SendData(mqttPacket._data, mqttPacket._len);			//锟较达拷平台
 		
-		dataPtr = ESP8266_GetIPD(250);									//�ȴ�ƽ̨��Ӧ
+		dataPtr = ESP8266_GetIPD(250);									//锟饺达拷平台锟斤拷应
 		if(dataPtr != NULL)
 		{
 			if(MQTT_UnPacketRecv(dataPtr) == MQTT_PKT_CONNACK)
 			{
 				switch(MQTT_UnPacketConnectAck(dataPtr))
 				{
-					case 0:	UsartPrintf(USART_DEBUG, " WARN:�������ӳɹ�\r\n");status = 0;break;
+					case 0:	UsartPrintf(USART_DEBUG, " WARN:锟斤拷锟斤拷锟斤拷锟接成癸拷\r\n");status = 0;break;
 					
-					case 1:UsartPrintf(USART_DEBUG, "WARN:	����ʧ�ܣ�Э�����\r\n");break;
-					case 2:UsartPrintf(USART_DEBUG, "WARN:	����ʧ�ܣ��Ƿ���clientid\r\n");break;
-					case 3:UsartPrintf(USART_DEBUG, "WARN:	����ʧ�ܣ�������ʧ��\r\n");break;
-					case 4:UsartPrintf(USART_DEBUG, "WARN:	����ʧ�ܣ��û������������\r\n");break;
-					case 5:UsartPrintf(USART_DEBUG, "WARN:	����ʧ�ܣ��Ƿ�����(����token�Ƿ�)\r\n");break;
+					case 1:UsartPrintf(USART_DEBUG, "WARN:	锟斤拷锟斤拷失锟杰ｏ拷协锟斤拷锟斤拷锟絓r\n");break;
+					case 2:UsartPrintf(USART_DEBUG, "WARN:	锟斤拷锟斤拷失锟杰ｏ拷锟角凤拷锟斤拷clientid\r\n");break;
+					case 3:UsartPrintf(USART_DEBUG, "WARN:	锟斤拷锟斤拷失锟杰ｏ拷锟斤拷锟斤拷锟斤拷失锟斤拷\r\n");break;
+					case 4:UsartPrintf(USART_DEBUG, "WARN:	锟斤拷锟斤拷失锟杰ｏ拷锟矫伙拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟絓r\n");break;
+					case 5:UsartPrintf(USART_DEBUG, "WARN:	锟斤拷锟斤拷失锟杰ｏ拷锟角凤拷锟斤拷锟斤拷(锟斤拷锟斤拷token锟角凤拷)\r\n");break;
 					
-					default:UsartPrintf(USART_DEBUG, "ERR:	����ʧ�ܣ�δ֪����\r\n");break;
+					default:UsartPrintf(USART_DEBUG, "ERR:	锟斤拷锟斤拷失锟杰ｏ拷未知锟斤拷锟斤拷\r\n");break;
 				}
 			}
 		}
 		
-		MQTT_DeleteBuffer(&mqttPacket);								//ɾ��
+		MQTT_DeleteBuffer(&mqttPacket);								//删锟斤拷
 	}
 	else
 		UsartPrintf(USART_DEBUG, "WARN:	MQTT_PacketConnect Failed\r\n");
@@ -408,20 +411,20 @@ short OneNet_FillBuf(char *buf, unsigned short buf_size)
 }	
 
 //==========================================================
-//	�������ƣ�	OneNet_SendData
+//	锟斤拷锟斤拷锟斤拷锟狡ｏ拷	OneNet_SendData
 //
-//	�������ܣ�	�ϴ����ݵ�ƽ̨
+//	锟斤拷锟斤拷锟斤拷锟杰ｏ拷	锟较达拷锟斤拷锟捷碉拷平台
 //
-//	��ڲ�����?type���������ݵĸ�ʽ
+//	锟斤拷诓锟斤拷锟斤拷锟?type锟斤拷锟斤拷锟斤拷锟斤拷锟捷的革拷式
 //
-//	���ز�����	��
+//	锟斤拷锟截诧拷锟斤拷锟斤拷	锟斤拷
 //
-//	˵����		
+//	说锟斤拷锟斤拷		
 //==========================================================
 void OneNet_SendData(void)
 {
 	
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};					//Э���?
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};					//协锟斤拷锟?
 	
 	char buf[ONENET_UPLOAD_BUF_SIZE];
 	
@@ -431,19 +434,19 @@ void OneNet_SendData(void)
 	
 	memset(buf, 0, sizeof(buf));
 	
-	body_len = OneNet_FillBuf(buf, sizeof(buf));			//��ȡ��ǰ��Ҫ���͵����������ܳ���
+	body_len = OneNet_FillBuf(buf, sizeof(buf));			//锟斤拷取锟斤拷前锟斤拷要锟斤拷锟酵碉拷锟斤拷锟斤拷锟斤拷锟斤拷锟杰筹拷锟斤拷
 	
 	if(body_len)
 	{
-		if(MQTT_PacketSaveData(PROID, DEVICE_NAME, body_len, NULL, &mqttPacket) == 0)	//���?
+		if(MQTT_PacketSaveData(PROID, DEVICE_NAME, body_len, NULL, &mqttPacket) == 0)	//锟斤拷锟?
 		{
 			for(; i < body_len; i++)
 				mqttPacket._data[mqttPacket._len++] = buf[i];
 			
-			ESP8266_SendData(mqttPacket._data, mqttPacket._len);					//�ϴ����ݵ�ƽ̨
+			ESP8266_SendData(mqttPacket._data, mqttPacket._len);					//锟较达拷锟斤拷锟捷碉拷平台
 //			UsartPrintf(USART_DEBUG, "Send %d Bytes\r\n", mqttPacket._len);
 			
-			MQTT_DeleteBuffer(&mqttPacket);				//ɾ��
+			MQTT_DeleteBuffer(&mqttPacket);				//删锟斤拷
 //			SendWaitForAck++;
 		}
 		else
@@ -453,48 +456,48 @@ void OneNet_SendData(void)
 }
 
 //==========================================================
-//	�������ƣ�	OneNET_Publish
+//	锟斤拷锟斤拷锟斤拷锟狡ｏ拷	OneNET_Publish
 //
-//	�������ܣ�	������Ϣ
+//	锟斤拷锟斤拷锟斤拷锟杰ｏ拷	锟斤拷锟斤拷锟斤拷息
 //
-//	��ڲ�����?topic������������
-//				msg����Ϣ����
+//	锟斤拷诓锟斤拷锟斤拷锟?topic锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
+//				msg锟斤拷锟斤拷息锟斤拷锟斤拷
 //
-//	���ز�����	��
+//	锟斤拷锟截诧拷锟斤拷锟斤拷	锟斤拷
 //
-//	˵����		
+//	说锟斤拷锟斤拷		
 //==========================================================
 void OneNET_Publish(const char *topic, const char *msg)
 {
 
-	MQTT_PACKET_STRUCTURE mqtt_packet = {NULL, 0, 0, 0};						//Э���?
+	MQTT_PACKET_STRUCTURE mqtt_packet = {NULL, 0, 0, 0};						//协锟斤拷锟?
 	
 	UsartPrintf(USART_DEBUG, "Publish Topic: %s, Msg: %s\r\n", topic, msg);
 	
 	if(MQTT_PacketPublish(MQTT_PUBLISH_ID, topic, msg, strlen(msg), MQTT_QOS_LEVEL0, 0, 1, &mqtt_packet) == 0)
 	{
-		ESP8266_SendData(mqtt_packet._data, mqtt_packet._len);					//��ƽ̨���Ͷ�������
+		ESP8266_SendData(mqtt_packet._data, mqtt_packet._len);					//锟斤拷平台锟斤拷锟酵讹拷锟斤拷锟斤拷锟斤拷
 		
-		MQTT_DeleteBuffer(&mqtt_packet);										//ɾ��
+		MQTT_DeleteBuffer(&mqtt_packet);										//删锟斤拷
 	}
 
 }
 
 //==========================================================
-//	�������ƣ�	OneNET_Subscribe
+//	锟斤拷锟斤拷锟斤拷锟狡ｏ拷	OneNET_Subscribe
 //
-//	�������ܣ�	����
+//	锟斤拷锟斤拷锟斤拷锟杰ｏ拷	锟斤拷锟斤拷
 //
-//	��ڲ�����?��
+//	锟斤拷诓锟斤拷锟斤拷锟?锟斤拷
 //
-//	���ز�����	��
+//	锟斤拷锟截诧拷锟斤拷锟斤拷	锟斤拷
 //
-//	˵����		
+//	说锟斤拷锟斤拷		
 //==========================================================
 void OneNET_Subscribe(void)
 {
 	
-	MQTT_PACKET_STRUCTURE mqtt_packet = {NULL, 0, 0, 0};						//Э���?
+	MQTT_PACKET_STRUCTURE mqtt_packet = {NULL, 0, 0, 0};						//协锟斤拷锟?
 	
 	char topic_buf[2][80];
 	const char *topics[] = {topic_buf[0], topic_buf[1]};
@@ -507,23 +510,23 @@ void OneNET_Subscribe(void)
 
 	if(MQTT_PacketSubscribe(MQTT_SUBSCRIBE_ID, MQTT_QOS_LEVEL0, topics, 2, &mqtt_packet) == 0)
 	{
-		ESP8266_SendData(mqtt_packet._data, mqtt_packet._len);					//��ƽ̨���Ͷ�������
+		ESP8266_SendData(mqtt_packet._data, mqtt_packet._len);					//锟斤拷平台锟斤拷锟酵讹拷锟斤拷锟斤拷锟斤拷
 		
-		MQTT_DeleteBuffer(&mqtt_packet);										//ɾ��
+		MQTT_DeleteBuffer(&mqtt_packet);										//删锟斤拷
 	}
 
 }
 
 //==========================================================
-//	�������ƣ�	OneNet_RevPro
+//	锟斤拷锟斤拷锟斤拷锟狡ｏ拷	OneNet_RevPro
 //
-//	�������ܣ�	ƽ̨�������ݼ��?
+//	锟斤拷锟斤拷锟斤拷锟杰ｏ拷	平台锟斤拷锟斤拷锟斤拷锟捷硷拷锟?
 //
-//	��ڲ�����?dataPtr��ƽ̨���ص�����
+//	锟斤拷诓锟斤拷锟斤拷锟?dataPtr锟斤拷平台锟斤拷锟截碉拷锟斤拷锟斤拷
 //
-//	���ز�����	��
+//	锟斤拷锟截诧拷锟斤拷锟斤拷	锟斤拷
 //
-//	˵����		
+//	说锟斤拷锟斤拷		
 //==========================================================
 void OneNet_RevPro(unsigned char *cmd)
 {
@@ -551,7 +554,7 @@ void OneNet_RevPro(unsigned char *cmd)
 	type = MQTT_UnPacketRecv(cmd);
 	switch(type)
 	{
-		case MQTT_PKT_PUBLISH:																//���յ�Publish��Ϣ
+		case MQTT_PKT_PUBLISH:																//锟斤拷锟秸碉拷Publish锟斤拷息
 		
 			result = MQTT_UnPacketPublish(cmd, &cmdid_topic, &topic_len, &req_payload, &req_len, &qos, &pkt_id);
 			if(result == 0)
@@ -634,7 +637,7 @@ void OneNet_RevPro(unsigned char *cmd)
 			
 		break;
 
-		case MQTT_PKT_PUBACK:														//����Publish��Ϣ��ƽ̨�ظ���Ack
+		case MQTT_PKT_PUBACK:														//锟斤拷锟斤拷Publish锟斤拷息锟斤拷平台锟截革拷锟斤拷Ack
 		
 			if(MQTT_UnPacketPublishAck(cmd) == 0)
 			{
@@ -643,7 +646,7 @@ void OneNet_RevPro(unsigned char *cmd)
 			}
 		break;
 		
-		case MQTT_PKT_SUBACK:																//����Subscribe��Ϣ��Ack
+		case MQTT_PKT_SUBACK:																//锟斤拷锟斤拷Subscribe锟斤拷息锟斤拷Ack
 		
 			if(MQTT_UnPacketSubscribe(cmd) == 0)
 				UsartPrintf(USART_DEBUG, "Tips:	MQTT Subscribe OK\r\n");
@@ -657,7 +660,7 @@ void OneNet_RevPro(unsigned char *cmd)
 		break;
 	}
 	
-	ESP8266_Clear();									//��ջ���?
+	ESP8266_Clear();									//锟斤拷栈锟斤拷锟?
 	
 	if(result == -1)
 		return;
@@ -667,5 +670,78 @@ void OneNet_RevPro(unsigned char *cmd)
 		MQTT_FreeBuffer(cmdid_topic);
 		MQTT_FreeBuffer(req_payload);
 	}
+
+}
+
+extern u8 onenet_connected;
+
+//==========================================================
+//	函数名称：	OneNet_ReConnect
+//
+//	函数功能：	自动断线重连（非阻塞定时单次尝试）
+//
+//	输入参数：	无
+//
+//	输出参数：	无
+//
+//	说明：		当掉线后，由主循环定时（如每5秒）调用此函数尝试重连。
+//				每次仅尝试一次，失败则立即退出，以防止卡死主循环导致
+//				传感器读取和过温保护失效。
+//==========================================================
+void OneNet_ReConnect(void)
+{
+	
+	UsartPrintf(USART_DEBUG, "Tips:	OneNet_ReConnect Attempt...\r\n");
+	
+	OLED_Clear();
+	OLED_printf(0, 0, "Reconnecting...");
+
+	// 1. 确保退出透传模式
+	ESP8266_ExitTransparent();
+
+	// 2. 发送 AT+CIPCLOSE 关闭可能残留的 TCP 连接
+	ESP8266_SendCmd("AT+CIPCLOSE\r\n", "OK");
+
+	// 3. 重新发起 TCP 连接（引入重试，给域名解析和握手预留时间以越过 500ms 命令超时限制）
+	u8 tcp_retry = 0;
+	while(ESP8266_SendCmd(ESP8266_ONENET_INFO, "CONNECT") != 0)
+	{
+		tcp_retry++;
+		if(tcp_retry >= 10) // 尝试 10 次，每次间隔 500ms，最大等待 5 秒
+		{
+			UsartPrintf(USART_DEBUG, "WARN:	TCP Reconnect Failed\r\n");
+			OLED_printf(0, 2, "TCP Connect Err");
+			return;
+		}
+		delay_ms(500);
+	}
+	
+	// 4. 重新进入透传模式
+	if(ESP8266_EnterTransparent() != 0)
+	{
+		UsartPrintf(USART_DEBUG, "WARN:	Enter Transparent Failed\r\n");
+		OLED_printf(0, 2, "Trans Mode Err");
+		return;
+	}
+
+	// 5. 进行 MQTT 协议连接握手
+	if(OneNet_DevLink() != 0)
+	{
+		UsartPrintf(USART_DEBUG, "WARN:	MQTT Reconnect Link Failed\r\n");
+		OLED_printf(0, 2, "MQTT Link Err");
+		return;
+	}
+
+	// 6. 重新订阅相关主题
+	OneNET_Subscribe();
+
+	onenet_connected = 1;
+	
+	OLED_Clear();
+	OLED_printf(0, 0, "Reconnect OK!");
+	delay_ms(500);
+	OLED_Clear();
+	
+	UsartPrintf(USART_DEBUG, "Tips:	OneNet_ReConnect Success!\r\n");
 
 }

@@ -37,6 +37,7 @@ u8 temp_set = 40;
 u8 onenet_connected = 0;
 u8 onenet_send_ticks = 0;
 u8 ds18b20_ticks = 0;
+u16 onenet_reconnect_ticks = 0;
 /* 网络接收缓存 */
 unsigned char *dataPtr = NULL;
 
@@ -204,12 +205,22 @@ int main(void) // 主函数
 
         modbus_service();
 
-        // 每轮主循环都检查OneNet下发数据
-        if (onenet_connected)
+        // 每轮主循环都检查OneNet下发数据 (结合esp8266_rxDone标志，实现零阻塞超高速轮询)
+        if (onenet_connected && esp8266_rxDone)
         {
             dataPtr = ESP8266_GetIPD(0);
             if (dataPtr != NULL)
-                OneNet_RevPro(dataPtr);
+            {
+                if (strstr((const char *)dataPtr, "CLOSED") != NULL || strstr((const char *)dataPtr, "WIFI DISCONNECT") != NULL)
+                {
+                    UsartPrintf(USART_DEBUG, "OneNET Connection Closed or WIFI Disconnected!\r\n");
+                    onenet_connected = 0;
+                }
+                else
+                {
+                    OneNet_RevPro(dataPtr);
+                }
+            }
         }
 
         if (time_1ms >= 100)
@@ -299,6 +310,14 @@ int main(void) // 主函数
                 {
                     onenet_send_ticks = 0;
                     OneNet_SendData();
+                }
+            }
+            else
+            {
+                if (++onenet_reconnect_ticks >= 50) // ~5秒重连一次
+                {
+                    onenet_reconnect_ticks = 0;
+                    OneNet_ReConnect();
                 }
             }
         }

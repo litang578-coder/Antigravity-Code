@@ -15,4 +15,6 @@ void OneNET_Subscribe(void);
 
 void OneNet_RevPro(unsigned char *cmd);
 
+void OneNet_ReConnect(void);
+
 #endif

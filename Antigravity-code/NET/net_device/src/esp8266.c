@@ -1,11 +1,11 @@
 /**
  ************************************************************
- *	ÎÄ¼þÃû£º	esp8266.c
- *	×÷Õß£º		ÕÅ¼ÌÈð
- *	ÈÕÆÚ£º		2017-05-08
- *	°æ±¾£º		V1.0
- *	ËµÃ÷£º		ESP8266µÄ¼òµ¥Çý¶¯
- *	ÐÞ¸Ä¼ÇÂ¼£º	V1.1 Ôö¼ÓÍ¸´«Ä£Ê½¡¢IDLEÖÐ¶Ï½ÓÊÕÓÅ»¯
+ *	æ–‡ä»¶åï¼š	esp8266.c
+ *	ä½œè€…ï¼š		å¼ ç»§ç‘ž
+ *	æ—¥æœŸï¼š		2017-05-08
+ *	ç‰ˆæœ¬ï¼š		V1.0
+ *	è¯´æ˜Žï¼š		ESP8266çš„ç®€å•é©±åŠ¨
+ *	ä¿®æ”¹è®°å½•ï¼š	V1.1 å¢žåŠ é€ä¼ æ¨¡å¼ã€IDLEä¸­æ–­æŽ¥æ”¶ä¼˜åŒ–
  ************************************************************
 **/
 
@@ -22,11 +22,11 @@
 unsigned char esp8266_buf[512];
 unsigned short esp8266_cnt = 0;
 unsigned short esp8266_cntPre = 0;
-unsigned char esp8266_rxDone = 0;			// USART2 IDLEÖÐ¶ÏÖÃ1
-unsigned char esp8266_transparent = 0;		// 1=Í¸´«Ä£Ê½
+unsigned char esp8266_rxDone = 0;			// USART2 IDLEä¸­æ–­ç½®1
+unsigned char esp8266_transparent = 0;		// 1=é€ä¼ æ¨¡å¼
 
 //==========================================================
-//	Çå¿Õ½ÓÊÕ»º´æ
+//	æ¸…ç©ºæŽ¥æ”¶ç¼“å­˜
 void ESP8266_Clear(void)
 {
 	memset(esp8266_buf, 0, sizeof(esp8266_buf));
@@ -35,13 +35,13 @@ void ESP8266_Clear(void)
 }
 
 //==========================================================
-//	¼ì²éÊÇ·ñ½ÓÊÕÍê³É£¨Ê¹ÓÃIDLEÖÐ¶Ï±êÖ¾£©
+//	æ£€æŸ¥æ˜¯å¦æŽ¥æ”¶å®Œæˆï¼ˆä½¿ç”¨IDLEä¸­æ–­æ ‡å¿—ï¼‰
 _Bool ESP8266_WaitRecive(void)
 {
 	if(esp8266_cnt == 0)
 		return REV_WAIT;
 
-	// IDLEÖÐ¶Ï´¥·¢ -> Ò»Ö¡½ÓÊÕÍê³É
+	// IDLEä¸­æ–­è§¦å‘ -> ä¸€å¸§æŽ¥æ”¶å®Œæˆ
 	if(esp8266_rxDone)
 	{
 		esp8266_rxDone = 0;
@@ -52,10 +52,10 @@ _Bool ESP8266_WaitRecive(void)
 }
 
 //==========================================================
-//	·¢ËÍATÃüÁî²¢¼ì²éÏìÓ¦
+//	å‘é€ATå‘½ä»¤å¹¶æ£€æŸ¥å“åº”
 _Bool ESP8266_SendCmd(char *cmd, char *res)
 {
-	unsigned char timeOut = 100;		// 500ms³¬Ê± (100 x 5ms)
+	unsigned char timeOut = 100;		// 500msè¶…æ—¶ (100 x 5ms)
 
 	Usart_SendString(USART2, (unsigned char *)cmd, strlen((const char *)cmd));
 
@@ -75,17 +75,17 @@ _Bool ESP8266_SendCmd(char *cmd, char *res)
 }
 
 //==========================================================
-//	·¢ËÍÊý¾Ý£¨Ö§³ÖÍ¸´«Ä£Ê½£©
+//	å‘é€æ•°æ®ï¼ˆæ”¯æŒé€ä¼ æ¨¡å¼ï¼‰
 void ESP8266_SendData(unsigned char *data, unsigned short len)
 {
 	if(esp8266_transparent)
 	{
-		// Í¸´«Ä£Ê½£ºÖ±½ÓÐ´Èë×Ö½Ú£¬ÎÞÐèATÎÕÊÖ
+		// é€ä¼ æ¨¡å¼ï¼šç›´æŽ¥å†™å…¥å­—èŠ‚ï¼Œæ— éœ€ATæ¡æ‰‹
 		Usart_SendString(USART2, data, len);
 	}
 	else
 	{
-		// ÆÕÍ¨ATÄ£Ê½
+		// æ™®é€šATæ¨¡å¼
 		char cmdBuf[32];
 		ESP8266_Clear();
 		sprintf(cmdBuf, "AT+CIPSEND=%d\r\n", len);
@@ -97,12 +97,12 @@ void ESP8266_SendData(unsigned char *data, unsigned short len)
 }
 
 //==========================================================
-//	»ñÈ¡½ÓÊÕÊý¾Ý£¨Ö§³ÖÍ¸´«Ä£Ê½£©
+//	èŽ·å–æŽ¥æ”¶æ•°æ®ï¼ˆæ”¯æŒé€ä¼ æ¨¡å¼ï¼‰
 unsigned char *ESP8266_GetIPD(unsigned short timeOut)
 {
 	if(esp8266_transparent)
 	{
-		// Í¸´«Ä£Ê½£ºÔ­Ê¼MQTTÊý¾Ý£¬ÎÞ+IPDÍ·
+		// é€ä¼ æ¨¡å¼ï¼šåŽŸå§‹MQTTæ•°æ®ï¼Œæ— +IPDå¤´
 		do
 		{
 			if(ESP8266_WaitRecive() == REV_OK)
@@ -116,7 +116,7 @@ unsigned char *ESP8266_GetIPD(unsigned short timeOut)
 	}
 	else
 	{
-		// ÆÕÍ¨ATÄ£Ê½£º½âÎö+IPDÍ·
+		// æ™®é€šATæ¨¡å¼ï¼šè§£æž+IPDå¤´
 		char *ptrIPD = NULL;
 		do
 		{
@@ -142,7 +142,7 @@ unsigned char *ESP8266_GetIPD(unsigned short timeOut)
 }
 
 //==========================================================
-//	³õÊ¼»¯ESP8266
+//	åˆå§‹åŒ–ESP8266
 void ESP8266_Init(void)
 {
 	ESP8266_Clear();
@@ -170,11 +170,11 @@ void ESP8266_Init(void)
 }
 
 //==========================================================
-//	½øÈëÍ¸´«Ä£Ê½
+//	è¿›å…¥é€ä¼ æ¨¡å¼
 _Bool ESP8266_EnterTransparent(void)
 {
 	if(ESP8266_SendCmd("AT+CIPMODE=1\r\n", "OK"))
-		return 1;		// ¹Ì¼þ²»Ö§³Ö£¬»ØÍËÆÕÍ¨Ä£Ê½
+		return 1;		// å›ºä»¶ä¸æ”¯æŒï¼Œå›žé€€æ™®é€šæ¨¡å¼
 
 	ESP8266_Clear();
 	Usart_SendString(USART2, (unsigned char *)"AT+CIPSEND\r\n", 12);
@@ -186,7 +186,7 @@ _Bool ESP8266_EnterTransparent(void)
 		{
 			ESP8266_Clear();
 			esp8266_transparent = 1;
-			return 0;		// ³É¹¦
+			return 0;		// æˆåŠŸ
 		}
 	}
 
@@ -195,9 +195,11 @@ _Bool ESP8266_EnterTransparent(void)
 }
 
 //==========================================================
-//	ÍË³öÍ¸´«Ä£Ê½
+//	é€€å‡ºé€ä¼ æ¨¡å¼
 void ESP8266_ExitTransparent(void)
 {
+	if(!esp8266_transparent)
+		return;
 	delay_ms(1000);
 	Usart_SendString(USART2, (unsigned char *)"+++", 3);
 	delay_ms(1000);
@@ -206,7 +208,7 @@ void ESP8266_ExitTransparent(void)
 }
 
 //==========================================================
-//	USART2ÖÐ¶Ï·þÎñº¯Êý
+//	USART2ä¸­æ–­æœåŠ¡å‡½æ•°
 void USART2_IRQHandler(void)
 {
 	if(USART_GetITStatus(USART2, USART_IT_RXNE) != RESET)
@@ -219,10 +221,10 @@ void USART2_IRQHandler(void)
 		USART_ClearITPendingBit(USART2, USART_IT_RXNE);
 	}
 
-	// IDLEÖÐ¶Ï£ºÒ»Ö¡Êý¾Ý½ÓÊÕÍê³É
+	// IDLEä¸­æ–­ï¼šä¸€å¸§æ•°æ®æŽ¥æ”¶å®Œæˆ
 	if(USART_GetITStatus(USART2, USART_IT_IDLE) != RESET)
 	{
-		(void)USART2->SR;	// Çå³ýIDLE±êÖ¾£ºÏÈ¶ÁSRÔÙ¶ÁDR
+		(void)USART2->SR;	// æ¸…é™¤IDLEæ ‡å¿—ï¼šå…ˆè¯»SRå†è¯»DR
 		(void)USART2->DR;
 		esp8266_rxDone = 1;
 	}
