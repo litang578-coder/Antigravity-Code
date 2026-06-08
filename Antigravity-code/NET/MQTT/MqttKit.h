@@ -1,184 +1,184 @@
-#ifndef _MQTTKIT_H_
-#define _MQTTKIT_H_
-
-
-#include "Common.h"
-
-
-//=============================ÅäÖÃ==============================
-//===========¿ÉÒÔÌá¹©RTOSµÄÄÚ´æ¹ÜÀí·½°¸£¬Ò²¿ÉÒÔÊ¹ÓÃC¿âµÄ=========
-//RTOS
-#include <stdlib.h>
-
-#define MQTT_MallocBuffer	malloc
-
-#define MQTT_FreeBuffer		free
-//==========================================================
-
-
-#define MOSQ_MSB(A)         (uint8)((A & 0xFF00) >> 8)
-#define MOSQ_LSB(A)         (uint8)(A & 0x00FF)
-
-
-/*--------------------------------ÄÚ´æ·ÖÅä·½°¸±êÖ¾--------------------------------*/
-#define MEM_FLAG_NULL		0
-#define MEM_FLAG_ALLOC		1
-#define MEM_FLAG_STATIC		2
-
-
-typedef struct Buffer
-{
-	
-	uint8	*_data;		//Ğ­ÒéÊı¾İ
-	
-	uint32	_len;		//Ğ´ÈëµÄÊı¾İ³¤¶È
-	
-	uint32	_size;		//»º´æ×Ü´óĞ¡
-	
-	uint8	_memFlag;	//ÄÚ´æÊ¹ÓÃµÄ·½°¸£º0-Î´·ÖÅä	1-Ê¹ÓÃµÄ¶¯Ì¬·ÖÅä		2-Ê¹ÓÃµÄ¹Ì¶¨ÄÚ´æ
-	
-} MQTT_PACKET_STRUCTURE;
-
-
-/*--------------------------------¹Ì¶¨Í·²¿ÏûÏ¢ÀàĞÍ--------------------------------*/
-enum MqttPacketType
-{
-	
-    MQTT_PKT_CONNECT = 1, /**< Á¬½ÓÇëÇóÊı¾İ°ü */
-    MQTT_PKT_CONNACK,     /**< Á¬½ÓÈ·ÈÏÊı¾İ°ü */
-    MQTT_PKT_PUBLISH,     /**< ·¢²¼Êı¾İÊı¾İ°ü */
-    MQTT_PKT_PUBACK,      /**< ·¢²¼È·ÈÏÊı¾İ°ü */
-    MQTT_PKT_PUBREC,      /**< ·¢²¼Êı¾İÒÑ½ÓÊÕÊı¾İ°ü£¬Qos 2Ê±£¬»Ø¸´MQTT_PKT_PUBLISH */
-    MQTT_PKT_PUBREL,      /**< ·¢²¼Êı¾İÊÍ·ÅÊı¾İ°ü£¬ Qos 2Ê±£¬»Ø¸´MQTT_PKT_PUBREC */
-    MQTT_PKT_PUBCOMP,     /**< ·¢²¼Íê³ÉÊı¾İ°ü£¬ Qos 2Ê±£¬»Ø¸´MQTT_PKT_PUBREL */
-    MQTT_PKT_SUBSCRIBE,   /**< ¶©ÔÄÊı¾İ°ü */
-    MQTT_PKT_SUBACK,      /**< ¶©ÔÄÈ·ÈÏÊı¾İ°ü */
-    MQTT_PKT_UNSUBSCRIBE, /**< È¡Ïû¶©ÔÄÊı¾İ°ü */
-    MQTT_PKT_UNSUBACK,    /**< È¡Ïû¶©ÔÄÈ·ÈÏÊı¾İ°ü */
-    MQTT_PKT_PINGREQ,     /**< ping Êı¾İ°ü */
-    MQTT_PKT_PINGRESP,    /**< ping ÏìÓ¦Êı¾İ°ü */
-    MQTT_PKT_DISCONNECT,  /**< ¶Ï¿ªÁ¬½ÓÊı¾İ°ü */
-	
-	//ĞÂÔö
-	
-	MQTT_PKT_CMD  		 /**< ÃüÁîÏÂ·¢Êı¾İ°ü */
-	
-};
-
-
-/*--------------------------------MQTT QOSµÈ¼¶--------------------------------*/
-enum MqttQosLevel
-{
-	
-    MQTT_QOS_LEVEL0,  /**< ×î¶à·¢ËÍÒ»´Î */
-    MQTT_QOS_LEVEL1,  /**< ×îÉÙ·¢ËÍÒ»´Î  */
-    MQTT_QOS_LEVEL2   /**< Ö»·¢ËÍÒ»´Î */
-	
-};
-
-
-/*--------------------------------MQTT Á¬½ÓÇëÇó±êÖ¾Î»£¬ÄÚ²¿Ê¹ÓÃ--------------------------------*/
-enum MqttConnectFlag
-{
-	
-    MQTT_CONNECT_CLEAN_SESSION  = 0x02,
-    MQTT_CONNECT_WILL_FLAG      = 0x04,
-    MQTT_CONNECT_WILL_QOS0      = 0x00,
-    MQTT_CONNECT_WILL_QOS1      = 0x08,
-    MQTT_CONNECT_WILL_QOS2      = 0x10,
-    MQTT_CONNECT_WILL_RETAIN    = 0x20,
-    MQTT_CONNECT_PASSORD        = 0x40,
-    MQTT_CONNECT_USER_NAME      = 0x80
-	
-};
-
-
-/*--------------------------------ÏûÏ¢µÄpacket ID£¬¿É×Ô¶¨Òå--------------------------------*/
-#define MQTT_PUBLISH_ID			10
-
-#define MQTT_SUBSCRIBE_ID		20
-
-#define MQTT_UNSUBSCRIBE_ID		30
-
-
-/*--------------------------------É¾°ü--------------------------------*/
-void MQTT_DeleteBuffer(MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------½â°ü--------------------------------*/
-uint8 MQTT_UnPacketRecv(uint8 *dataPtr);
-
-/*--------------------------------µÇÂ¼×é°ü--------------------------------*/
-uint8 MQTT_PacketConnect(const int8 *user, const int8 *password, const int8 *devid,
-						uint16 cTime, uint1 clean_session, uint1 qos,
-						const int8 *will_topic, const int8 *will_msg, int32 will_retain,
-						MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------¶Ï¿ªÁ¬½Ó×é°ü--------------------------------*/
-uint1 MQTT_PacketDisConnect(MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------Á¬½ÓÏìÓ¦½â°ü--------------------------------*/
-uint8 MQTT_UnPacketConnectAck(uint8 *rev_data);
-
-/*--------------------------------Êı¾İµãÉÏ´«×é°ü--------------------------------*/
-uint1 MQTT_PacketSaveData(const int8 *pro_id, const char *dev_name,
-								int16 send_len, int8 *type_bin_head, MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------¶ş½øÖÆÎÄ¼şÉÏ´«×é°ü--------------------------------*/
-uint1 MQTT_PacketSaveBinData(const int8 *name, int16 file_len, MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------ÃüÁîÏÂ·¢½â°ü--------------------------------*/
-uint8 MQTT_UnPacketCmd(uint8 *rev_data, int8 **cmdid, int8 **req, uint16 *req_len);
-
-/*--------------------------------ÃüÁî»Ø¸´×é°ü--------------------------------*/
-uint1 MQTT_PacketCmdResp(const int8 *cmdid, const int8 *req, MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------¶©ÔÄÖ÷Ìâ×é°ü--------------------------------*/
-uint8 MQTT_PacketSubscribe(uint16 pkt_id, enum MqttQosLevel qos, const int8 *topics[], uint8 topics_cnt, MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------¶©ÔÄÖ÷Ìâ»Ø¸´½â°ü--------------------------------*/
-uint8 MQTT_UnPacketSubscribe(uint8 *rev_data);
-
-/*--------------------------------È¡Ïû¶©ÔÄ×é°ü--------------------------------*/
-uint8 MQTT_PacketUnSubscribe(uint16 pkt_id, const int8 *topics[], uint8 topics_cnt, MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------È¡Ïû¶©ÔÄ»Ø¸´½â°ü--------------------------------*/
-uint1 MQTT_UnPacketUnSubscribe(uint8 *rev_data);
-
-/*--------------------------------·¢²¼Ö÷Ìâ×é°ü--------------------------------*/
-uint8 MQTT_PacketPublish(uint16 pkt_id, const int8 *topic,
-						const int8 *payload, uint32 payload_len,
-						enum MqttQosLevel qos, int32 retain, int32 own,
-						MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------·¢²¼ÏûÏ¢»Ø¸´½â°ü--------------------------------*/
-uint8 MQTT_UnPacketPublish(uint8 *rev_data, int8 **topic, uint16 *topic_len, int8 **payload, uint16 *payload_len, uint8 *qos, uint16 *pkt_id);
-
-/*--------------------------------·¢²¼ÏûÏ¢µÄAck×é°ü--------------------------------*/
-uint1 MQTT_PacketPublishAck(uint16 pkt_id, MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------·¢²¼ÏûÏ¢µÄAck½â°ü--------------------------------*/
-uint1 MQTT_UnPacketPublishAck(uint8 *rev_data);
-
-/*--------------------------------·¢²¼ÏûÏ¢µÄRec×é°ü--------------------------------*/
-uint1 MQTT_PacketPublishRec(uint16 pkt_id, MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------·¢²¼ÏûÏ¢µÄRec½â°ü--------------------------------*/
-uint1 MQTT_UnPacketPublishRec(uint8 *rev_data);
-
-/*--------------------------------·¢²¼ÏûÏ¢µÄRel×é°ü--------------------------------*/
-uint1 MQTT_PacketPublishRel(uint16 pkt_id, MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------·¢²¼ÏûÏ¢µÄRel½â°ü--------------------------------*/
-uint1 MQTT_UnPacketPublishRel(uint8 *rev_data, uint16 pkt_id);
-
-/*--------------------------------·¢²¼ÏûÏ¢µÄComp×é°ü--------------------------------*/
-uint1 MQTT_PacketPublishComp(uint16 pkt_id, MQTT_PACKET_STRUCTURE *mqttPacket);
-
-/*--------------------------------·¢²¼ÏûÏ¢µÄComp½â°ü--------------------------------*/
-uint1 MQTT_UnPacketPublishComp(uint8 *rev_data);
-
-/*--------------------------------ĞÄÌøÇëÇó×é°ü--------------------------------*/
-uint1 MQTT_PacketPing(MQTT_PACKET_STRUCTURE *mqttPacket);
-
-
-#endif
+#ifndef _MQTTKIT_H_
+#define _MQTTKIT_H_
+
+
+#include "Common.h"
+
+
+//=============================é…ç½®==============================
+//===========å¯ä»¥æä¾›RTOSçš„å†…å­˜ç®¡ç†æ–¹æ¡ˆï¼Œä¹Ÿå¯ä»¥ä½¿ç”¨Cåº“çš„=========
+//RTOS
+#include <stdlib.h>
+
+#define MQTT_MallocBuffer	malloc
+
+#define MQTT_FreeBuffer		free
+//==========================================================
+
+
+#define MOSQ_MSB(A)         (uint8)((A & 0xFF00) >> 8)
+#define MOSQ_LSB(A)         (uint8)(A & 0x00FF)
+
+
+/*--------------------------------å†…å­˜åˆ†é…æ–¹æ¡ˆæ ‡å¿—--------------------------------*/
+#define MEM_FLAG_NULL		0
+#define MEM_FLAG_ALLOC		1
+#define MEM_FLAG_STATIC		2
+
+
+typedef struct Buffer
+{
+	
+	uint8	*_data;		//åè®®æ•°æ®
+	
+	uint32	_len;		//å†™å…¥çš„æ•°æ®é•¿åº¦
+	
+	uint32	_size;		//ç¼“å­˜æ€»å¤§å°
+	
+	uint8	_memFlag;	//å†…å­˜ä½¿ç”¨çš„æ–¹æ¡ˆï¼š0-æœªåˆ†é…	1-ä½¿ç”¨çš„åŠ¨æ€åˆ†é…		2-ä½¿ç”¨çš„å›ºå®šå†…å­˜
+	
+} MQTT_PACKET_STRUCTURE;
+
+
+/*--------------------------------å›ºå®šå¤´éƒ¨æ¶ˆæ¯ç±»å‹--------------------------------*/
+enum MqttPacketType
+{
+	
+    MQTT_PKT_CONNECT = 1, /**< è¿æ¥è¯·æ±‚æ•°æ®åŒ… */
+    MQTT_PKT_CONNACK,     /**< è¿æ¥ç¡®è®¤æ•°æ®åŒ… */
+    MQTT_PKT_PUBLISH,     /**< å‘å¸ƒæ•°æ®æ•°æ®åŒ… */
+    MQTT_PKT_PUBACK,      /**< å‘å¸ƒç¡®è®¤æ•°æ®åŒ… */
+    MQTT_PKT_PUBREC,      /**< å‘å¸ƒæ•°æ®å·²æ¥æ”¶æ•°æ®åŒ…ï¼ŒQos 2æ—¶ï¼Œå›å¤MQTT_PKT_PUBLISH */
+    MQTT_PKT_PUBREL,      /**< å‘å¸ƒæ•°æ®é‡Šæ”¾æ•°æ®åŒ…ï¼Œ Qos 2æ—¶ï¼Œå›å¤MQTT_PKT_PUBREC */
+    MQTT_PKT_PUBCOMP,     /**< å‘å¸ƒå®Œæˆæ•°æ®åŒ…ï¼Œ Qos 2æ—¶ï¼Œå›å¤MQTT_PKT_PUBREL */
+    MQTT_PKT_SUBSCRIBE,   /**< è®¢é˜…æ•°æ®åŒ… */
+    MQTT_PKT_SUBACK,      /**< è®¢é˜…ç¡®è®¤æ•°æ®åŒ… */
+    MQTT_PKT_UNSUBSCRIBE, /**< å–æ¶ˆè®¢é˜…æ•°æ®åŒ… */
+    MQTT_PKT_UNSUBACK,    /**< å–æ¶ˆè®¢é˜…ç¡®è®¤æ•°æ®åŒ… */
+    MQTT_PKT_PINGREQ,     /**< ping æ•°æ®åŒ… */
+    MQTT_PKT_PINGRESP,    /**< ping å“åº”æ•°æ®åŒ… */
+    MQTT_PKT_DISCONNECT,  /**< æ–­å¼€è¿æ¥æ•°æ®åŒ… */
+	
+	//æ–°å¢
+	
+	MQTT_PKT_CMD  		 /**< å‘½ä»¤ä¸‹å‘æ•°æ®åŒ… */
+	
+};
+
+
+/*--------------------------------MQTT QOSç­‰çº§--------------------------------*/
+enum MqttQosLevel
+{
+	
+    MQTT_QOS_LEVEL0,  /**< æœ€å¤šå‘é€ä¸€æ¬¡ */
+    MQTT_QOS_LEVEL1,  /**< æœ€å°‘å‘é€ä¸€æ¬¡  */
+    MQTT_QOS_LEVEL2   /**< åªå‘é€ä¸€æ¬¡ */
+	
+};
+
+
+/*--------------------------------MQTT è¿æ¥è¯·æ±‚æ ‡å¿—ä½ï¼Œå†…éƒ¨ä½¿ç”¨--------------------------------*/
+enum MqttConnectFlag
+{
+	
+    MQTT_CONNECT_CLEAN_SESSION  = 0x02,
+    MQTT_CONNECT_WILL_FLAG      = 0x04,
+    MQTT_CONNECT_WILL_QOS0      = 0x00,
+    MQTT_CONNECT_WILL_QOS1      = 0x08,
+    MQTT_CONNECT_WILL_QOS2      = 0x10,
+    MQTT_CONNECT_WILL_RETAIN    = 0x20,
+    MQTT_CONNECT_PASSORD        = 0x40,
+    MQTT_CONNECT_USER_NAME      = 0x80
+	
+};
+
+
+/*--------------------------------æ¶ˆæ¯çš„packet IDï¼Œå¯è‡ªå®šä¹‰--------------------------------*/
+#define MQTT_PUBLISH_ID			10
+
+#define MQTT_SUBSCRIBE_ID		20
+
+#define MQTT_UNSUBSCRIBE_ID		30
+
+
+/*--------------------------------åˆ åŒ…--------------------------------*/
+void MQTT_DeleteBuffer(MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------è§£åŒ…--------------------------------*/
+uint8 MQTT_UnPacketRecv(uint8 *dataPtr);
+
+/*--------------------------------ç™»å½•ç»„åŒ…--------------------------------*/
+uint8 MQTT_PacketConnect(const int8 *user, const int8 *password, const int8 *devid,
+						uint16 cTime, uint1 clean_session, uint1 qos,
+						const int8 *will_topic, const int8 *will_msg, int32 will_retain,
+						MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------æ–­å¼€è¿æ¥ç»„åŒ…--------------------------------*/
+uint1 MQTT_PacketDisConnect(MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------è¿æ¥å“åº”è§£åŒ…--------------------------------*/
+uint8 MQTT_UnPacketConnectAck(uint8 *rev_data);
+
+/*--------------------------------æ•°æ®ç‚¹ä¸Šä¼ ç»„åŒ…--------------------------------*/
+uint1 MQTT_PacketSaveData(const int8 *pro_id, const char *dev_name,
+								int16 send_len, int8 *type_bin_head, MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------äºŒè¿›åˆ¶æ–‡ä»¶ä¸Šä¼ ç»„åŒ…--------------------------------*/
+uint1 MQTT_PacketSaveBinData(const int8 *name, int16 file_len, MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------å‘½ä»¤ä¸‹å‘è§£åŒ…--------------------------------*/
+uint8 MQTT_UnPacketCmd(uint8 *rev_data, int8 **cmdid, int8 **req, uint16 *req_len);
+
+/*--------------------------------å‘½ä»¤å›å¤ç»„åŒ…--------------------------------*/
+uint1 MQTT_PacketCmdResp(const int8 *cmdid, const int8 *req, MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------è®¢é˜…ä¸»é¢˜ç»„åŒ…--------------------------------*/
+uint8 MQTT_PacketSubscribe(uint16 pkt_id, enum MqttQosLevel qos, const int8 *topics[], uint8 topics_cnt, MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------è®¢é˜…ä¸»é¢˜å›å¤è§£åŒ…--------------------------------*/
+uint8 MQTT_UnPacketSubscribe(uint8 *rev_data);
+
+/*--------------------------------å–æ¶ˆè®¢é˜…ç»„åŒ…--------------------------------*/
+uint8 MQTT_PacketUnSubscribe(uint16 pkt_id, const int8 *topics[], uint8 topics_cnt, MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------å–æ¶ˆè®¢é˜…å›å¤è§£åŒ…--------------------------------*/
+uint1 MQTT_UnPacketUnSubscribe(uint8 *rev_data);
+
+/*--------------------------------å‘å¸ƒä¸»é¢˜ç»„åŒ…--------------------------------*/
+uint8 MQTT_PacketPublish(uint16 pkt_id, const int8 *topic,
+						const int8 *payload, uint32 payload_len,
+						enum MqttQosLevel qos, int32 retain, int32 own,
+						MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------å‘å¸ƒæ¶ˆæ¯å›å¤è§£åŒ…--------------------------------*/
+uint8 MQTT_UnPacketPublish(uint8 *rev_data, int8 **topic, uint16 *topic_len, int8 **payload, uint16 *payload_len, uint8 *qos, uint16 *pkt_id);
+
+/*--------------------------------å‘å¸ƒæ¶ˆæ¯çš„Ackç»„åŒ…--------------------------------*/
+uint1 MQTT_PacketPublishAck(uint16 pkt_id, MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------å‘å¸ƒæ¶ˆæ¯çš„Ackè§£åŒ…--------------------------------*/
+uint1 MQTT_UnPacketPublishAck(uint8 *rev_data);
+
+/*--------------------------------å‘å¸ƒæ¶ˆæ¯çš„Recç»„åŒ…--------------------------------*/
+uint1 MQTT_PacketPublishRec(uint16 pkt_id, MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------å‘å¸ƒæ¶ˆæ¯çš„Recè§£åŒ…--------------------------------*/
+uint1 MQTT_UnPacketPublishRec(uint8 *rev_data);
+
+/*--------------------------------å‘å¸ƒæ¶ˆæ¯çš„Relç»„åŒ…--------------------------------*/
+uint1 MQTT_PacketPublishRel(uint16 pkt_id, MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------å‘å¸ƒæ¶ˆæ¯çš„Relè§£åŒ…--------------------------------*/
+uint1 MQTT_UnPacketPublishRel(uint8 *rev_data, uint16 pkt_id);
+
+/*--------------------------------å‘å¸ƒæ¶ˆæ¯çš„Compç»„åŒ…--------------------------------*/
+uint1 MQTT_PacketPublishComp(uint16 pkt_id, MQTT_PACKET_STRUCTURE *mqttPacket);
+
+/*--------------------------------å‘å¸ƒæ¶ˆæ¯çš„Compè§£åŒ…--------------------------------*/
+uint1 MQTT_UnPacketPublishComp(uint8 *rev_data);
+
+/*--------------------------------å¿ƒè·³è¯·æ±‚ç»„åŒ…--------------------------------*/
+uint1 MQTT_PacketPing(MQTT_PACKET_STRUCTURE *mqttPacket);
+
+
+#endif

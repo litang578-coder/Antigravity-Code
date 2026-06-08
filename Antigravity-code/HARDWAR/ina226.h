@@ -1,62 +1,60 @@
 #ifndef INA226_H
 #define INA226_H
 #include "sys.h"
- 
- 
- 
-/********** Ó²¼ş²ÎÊıÅäÖÃ **********/
-#define SHUNT_RESISTOR    0.100f				// ·ÖÁ÷µç×è100ºÁÅ·
-#define MAX_CURRENT       0.65536f					// ½¨Òé×î´óµçÁ÷
- 
-///********** Èí¼ş²ÎÊı **********/
-static float Current_LSB;								// µçÁ÷·Ö±æÂÊ
-static float Power_LSB;     						// ¹¦ÂÊĞ£×¼Öµ
- 
- 
-#define INA_SCL PAout(4)  //SCLÒı½Å
-#define INA_SDA PAout(5)  //SDAÒı½Å
- 
-#define INA_SCL_GPIO_PORT	GPIOA			/* GPIO¶Ë¿Ú */
-#define INA_SCL_RCC 	    RCC_APB2Periph_GPIOA		/* GPIO¶Ë¿ÚÊ±ÖÓ */
-#define INA_SCL_PIN		    GPIO_Pin_4		/* Á¬½Óµ½SCLÊ±ÖÓÏßµÄGPIO */
- 
-#define INA_SDA_GPIO_PORT	GPIOA			/* GPIO¶Ë¿Ú */
-#define INA_SDA_RCC 	    RCC_APB2Periph_GPIOA		/* GPIO¶Ë¿ÚÊ±ÖÓ */
-#define INA_SDA_PIN		    GPIO_Pin_5		/* Á¬½Óµ½SDAÊı¾İÏßµÄGPIO */
- 
+
+/********** ç¡¬ä»¶å‚æ•° **********/
+#define SHUNT_RESISTOR    0.100f           /* é‡‡æ ·ç”µé˜» 100 æ¯«æ¬§ */
+#define MAX_CURRENT       0.65536f         /* æœ€å¤§é‡ç¨‹ç”µæµ (A) */
+
+/********** æ ¡å‡†å‚æ•° **********/
+static float Current_LSB;                  /* ç”µæµæœ€å°åˆ†è¾¨ç‡ (A/bit) */
+static float Power_LSB;                    /* åŠŸç‡æœ€å°åˆ†è¾¨ç‡ (W/bit) */
+
+/* IIC å¼•è„šå®šä¹‰ */
+#define INA_SCL PAout(4)                   /* SCL å¼•è„š */
+#define INA_SDA PAout(5)                   /* SDA å¼•è„š */
+
+#define INA_SCL_GPIO_PORT	GPIOA          /* SCL æ‰€åœ¨ GPIO ç«¯å£ */
+#define INA_SCL_RCC 	    RCC_APB2Periph_GPIOA  /* SCL GPIO ç«¯å£æ—¶é’Ÿ */
+#define INA_SCL_PIN		    GPIO_Pin_4     /* SCL å¯¹åº”å¼•è„š */
+
+#define INA_SDA_GPIO_PORT	GPIOA          /* SDA æ‰€åœ¨ GPIO ç«¯å£ */
+#define INA_SDA_RCC 	    RCC_APB2Periph_GPIOA  /* SDA GPIO ç«¯å£æ—¶é’Ÿ */
+#define INA_SDA_PIN		    GPIO_Pin_5     /* SDA å¯¹åº”å¼•è„š */
+
 #define READ_SDA GPIO_ReadInputDataBit(INA_SDA_GPIO_PORT,INA_SDA_PIN)
- 
-#define READ_ADDR         0x81	 	//A0=GND£¬A1=GND // R=1, W=0
-#define WRITE_ADDR        0x80		//Ğ¾Æ¬IICµØÖ·
- 
-#define READ_ADDR1         0x8B	 	//A0=VCC£¬A1=VCC // R=1, W=0
-#define WRITE_ADDR1       0x8A		//Ğ¾Æ¬IICµØÖ·
- 
-#define Config_Reg        0x00		//Ä£Ê½ÅäÖÃ¼Ä´æÆ÷
-#define Shunt_V_Reg       0x01      //shunt voltage: 2.5uV/bit, 0.1R shunt max about 819mA
-#define Bus_V_Reg         0x02		//BUS×ÜÏßµçÑ¹£º1.25mV~40.96V(0~7FFF)
-#define Power_Reg         0x03		//¹¦ÂÊ£»Current_LSB * 25£¬FSR = 0xFFFF
-#define Current_Reg       0x04		//µçÁ÷£»LSB = 0.02mA£¬FSR = 0x7FFF
-#define Calib_Reg         0x05      //calibration register, depends on shunt resistor and Current_LSB
-#define Mask_En_Reg       0x06		//
-#define Alert_Reg         0x07		//
-#define Man_ID_Reg        0xFE  	//0x5449
-#define ID_Reg            0xFF  	//0x2260
- 
- 
+
+/* IIC åœ°å€å®šä¹‰ (7ä½åœ°å€å·¦ç§»1ä½) */
+#define READ_ADDR         0x81             /* A0=GND, A1=GND, è¯»åœ°å€ */
+#define WRITE_ADDR        0x80             /* A0=GND, A1=GND, å†™åœ°å€ */
+
+#define READ_ADDR1         0x8B            /* A0=VCC, A1=VCC, è¯»åœ°å€ */
+#define WRITE_ADDR1       0x8A             /* A0=VCC, A1=VCC, å†™åœ°å€ */
+
+/* INA226 å¯„å­˜å™¨åœ°å€ */
+#define Config_Reg        0x00             /* é…ç½®å¯„å­˜å™¨ */
+#define Shunt_V_Reg       0x01             /* Shunt ç”µå‹å¯„å­˜å™¨: 2.5uV/bit, 0.1R shunt max ~819mA */
+#define Bus_V_Reg         0x02             /* æ€»çº¿ç”µå‹å¯„å­˜å™¨: 1.25mV/bit, èŒƒå›´ 0~40.96V */
+#define Power_Reg         0x03             /* åŠŸç‡å¯„å­˜å™¨: Current_LSB * 25 */
+#define Current_Reg       0x04             /* ç”µæµå¯„å­˜å™¨: LSB = 0.02mA */
+#define Calib_Reg         0x05             /* æ ¡å‡†å¯„å­˜å™¨, å–å†³äºé‡‡æ ·ç”µé˜»å’Œ Current_LSB */
+#define Mask_En_Reg       0x06             /* å‘Šè­¦å±è”½/ä½¿èƒ½å¯„å­˜å™¨ */
+#define Alert_Reg         0x07             /* å‘Šè­¦é™å€¼å¯„å­˜å™¨ */
+#define Man_ID_Reg        0xFE             /* åˆ¶é€ å•† ID: 0x5449 */
+#define ID_Reg            0xFF             /* èŠ¯ç‰‡ ID: 0x2260 */
+
+/* å‡½æ•°å£°æ˜ */
 void INA226_Init(void);
 void INA226_Init1(void);
-void INA226_SendData(uint8_t addr,uint8_t reg,uint16_t data);
-uint16_t  INA226_Get_ID(uint8_t addr);
+void INA226_SendData(uint8_t addr, uint8_t reg, uint16_t data);
+uint16_t INA226_Get_ID(uint8_t addr);
 uint16_t INA226_GetShuntVoltage(uint8_t addr);
 uint16_t INA226_GetShuntCurrent(uint8_t addr);
 uint16_t INA226_GetVoltage(uint8_t addr);
 uint16_t INA226_Get_Power(uint8_t addr);
- 
+
 float INA226_ReadCurrent_A(uint8_t addr);
 float INA226_ReadCurrent_mA(uint8_t addr);
 float INA226_ReadPower(uint8_t addr);
- 
- 
-#endif
 
+#endif

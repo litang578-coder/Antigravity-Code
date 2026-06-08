@@ -1,57 +1,57 @@
-#ifndef __USART_H
-#define __USART_H
-#include "stdio.h"	
-#include "sys.h" 
-#include <stdarg.h>
-#include <string.h>
-#include <stdio.h>
-#include "esp8266.h"
-
-
-#define Usart_SendString Usart_SendStrLen
-#define UsartSendData 		Usart_SendData
-#define usart1_Init 			Usart1_Init 	
-#define usart2_Init				Usart2_Init 	
-#define usart3_Init				Usart3_Init
-#define UsartPrintf				Usart_Printf
-
-/* µ÷ÊÔ´®¿Ú±êÊ¶£¬¹¤³ÌÖĞÊ¹ÓÃ USART_DEBUG ×÷Îªµ÷ÊÔÊä³ö¿Ú */
-#define USART_DEBUG USART3
-
-/*´®¿Ú1 ½ÓÊÕ»º´æÇø */
-#define USART1_MAX_RECV_LEN		400					//×î´ó½ÓÊÕ»º´æ×Ö½ÚÊı
-#define USART1_MAX_SEND_LEN		400					//×î´ó·¢ËÍ»º´æ×Ö½ÚÊı
-extern u16 USART1_RX_STA;	
-extern u8 USART1_RX_BUF[USART1_MAX_RECV_LEN]; 				//½ÓÊÕ»º³å,×î´óUSART2_MAX_RECV_LEN¸ö×Ö½Ú.
-extern u8 USART1_TX_BUF[USART1_MAX_SEND_LEN]; 			  //·¢ËÍ»º³å,×î´óUSART2_MAX_SEND_LEN×Ö½Ú
-/*´®¿Ú2 ½ÓÊÕ»º´æÇø */
-#define USART2_MAX_RECV_LEN		400					//×î´ó½ÓÊÕ»º´æ×Ö½ÚÊı
-#define USART2_MAX_SEND_LEN		400					//×î´ó·¢ËÍ»º´æ×Ö½ÚÊı
-extern u16 USART2_RX_STA;	
-extern u8 USART2_RX_BUF[USART2_MAX_RECV_LEN]; 				//½ÓÊÕ»º³å,×î´óUSART2_MAX_RECV_LEN¸ö×Ö½Ú.
-extern u8 USART2_TX_BUF[USART2_MAX_SEND_LEN]; 			  //·¢ËÍ»º³å,×î´óUSART2_MAX_SEND_LEN×Ö½Ú
-/*´®¿Ú3 ½ÓÊÕ»º´æÇø */
-#define USART3_MAX_RECV_LEN		400					//×î´ó½ÓÊÕ»º´æ×Ö½ÚÊı
-#define USART3_MAX_SEND_LEN		400					//×î´ó·¢ËÍ»º´æ×Ö½ÚÊı
-extern u16 USART3_RX_STA;   						//½ÓÊÕÊı¾İ×´Ì¬
-extern u8 USART3_RX_BUF[USART3_MAX_RECV_LEN]; 				//½ÓÊÕ»º³å,×î´óUSART2_MAX_RECV_LEN¸ö×Ö½Ú.
-extern u8 USART3_TX_BUF[USART3_MAX_SEND_LEN]; 			  //·¢ËÍ»º³å,×î´óUSART2_MAX_SEND_LEN×Ö½Ú
-
-void Usart1_Init(u32 bound);
-void Usart2_Init(u32 bound);
-void Usart3_Init(u32 bound);
-
-void USART2_IRQHandler(void);
-void USART1_IRQHandler(void); 
-
-//Usart_Printf ²»¿ÉÖØÈë£¬²»ÄÜÓëprintf¡¢sprintfÍ¬Ê±µ÷ÓÃ
-//²»ÄÜÓëOLED_Printf Í¬Ê±µ÷ÓÃ
-void UsartPrintf(USART_TypeDef *USARTx, char *fmt,...);
-
-void Usart_SendData(USART_TypeDef *USARTx, u8 data);
-void Usart_SendStr(USART_TypeDef *USARTx, unsigned char *str);
-void Usart_SendStrLen(USART_TypeDef *USARTx, unsigned char *str, unsigned short len);
-
-#endif
-
-
+#ifndef __USART_H
+#define __USART_H
+#include "stdio.h"	
+#include "sys.h" 
+#include <stdarg.h>
+#include <string.h>
+#include <stdio.h>
+#include "esp8266.h"
+
+
+#define Usart_SendString Usart_SendStrLen
+#define UsartSendData 		Usart_SendData
+#define usart1_Init 			Usart1_Init 	
+#define usart2_Init				Usart2_Init 	
+#define usart3_Init				Usart3_Init
+#define UsartPrintf				Usart_Printf
+
+/* è°ƒè¯•ä¸²å£æ ‡è¯†ï¼Œå·¥ç¨‹ä¸­ä½¿ç”¨ USART_DEBUG ä½œä¸ºè°ƒè¯•è¾“å‡ºå£ */
+#define USART_DEBUG USART3
+
+/*ä¸²å£1 æ¥æ”¶ç¼“å­˜åŒº */
+#define USART1_MAX_RECV_LEN		400					//æœ€å¤§æ¥æ”¶ç¼“å­˜å­—èŠ‚æ•°
+#define USART1_MAX_SEND_LEN		400					//æœ€å¤§å‘é€ç¼“å­˜å­—èŠ‚æ•°
+extern u16 USART1_RX_STA;	
+extern u8 USART1_RX_BUF[USART1_MAX_RECV_LEN]; 				//æ¥æ”¶ç¼“å†²,æœ€å¤§USART2_MAX_RECV_LENä¸ªå­—èŠ‚.
+extern u8 USART1_TX_BUF[USART1_MAX_SEND_LEN]; 			  //å‘é€ç¼“å†²,æœ€å¤§USART2_MAX_SEND_LENå­—èŠ‚
+/*ä¸²å£2 æ¥æ”¶ç¼“å­˜åŒº */
+#define USART2_MAX_RECV_LEN		400					//æœ€å¤§æ¥æ”¶ç¼“å­˜å­—èŠ‚æ•°
+#define USART2_MAX_SEND_LEN		400					//æœ€å¤§å‘é€ç¼“å­˜å­—èŠ‚æ•°
+extern u16 USART2_RX_STA;	
+extern u8 USART2_RX_BUF[USART2_MAX_RECV_LEN]; 				//æ¥æ”¶ç¼“å†²,æœ€å¤§USART2_MAX_RECV_LENä¸ªå­—èŠ‚.
+extern u8 USART2_TX_BUF[USART2_MAX_SEND_LEN]; 			  //å‘é€ç¼“å†²,æœ€å¤§USART2_MAX_SEND_LENå­—èŠ‚
+/*ä¸²å£3 æ¥æ”¶ç¼“å­˜åŒº */
+#define USART3_MAX_RECV_LEN		400					//æœ€å¤§æ¥æ”¶ç¼“å­˜å­—èŠ‚æ•°
+#define USART3_MAX_SEND_LEN		400					//æœ€å¤§å‘é€ç¼“å­˜å­—èŠ‚æ•°
+extern u16 USART3_RX_STA;   						//æ¥æ”¶æ•°æ®çŠ¶æ€
+extern u8 USART3_RX_BUF[USART3_MAX_RECV_LEN]; 				//æ¥æ”¶ç¼“å†²,æœ€å¤§USART2_MAX_RECV_LENä¸ªå­—èŠ‚.
+extern u8 USART3_TX_BUF[USART3_MAX_SEND_LEN]; 			  //å‘é€ç¼“å†²,æœ€å¤§USART2_MAX_SEND_LENå­—èŠ‚
+
+void Usart1_Init(u32 bound);
+void Usart2_Init(u32 bound);
+void Usart3_Init(u32 bound);
+
+void USART2_IRQHandler(void);
+void USART1_IRQHandler(void); 
+
+//Usart_Printf ä¸å¯é‡å…¥ï¼Œä¸èƒ½ä¸printfã€sprintfåŒæ—¶è°ƒç”¨
+//ä¸èƒ½ä¸OLED_Printf åŒæ—¶è°ƒç”¨
+void UsartPrintf(USART_TypeDef *USARTx, char *fmt,...);
+
+void Usart_SendData(USART_TypeDef *USARTx, u8 data);
+void Usart_SendStr(USART_TypeDef *USARTx, unsigned char *str);
+void Usart_SendStrLen(USART_TypeDef *USARTx, unsigned char *str, unsigned short len);
+
+#endif
+
+

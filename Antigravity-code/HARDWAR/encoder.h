@@ -1,13 +1,16 @@
 #ifndef __ENCODER_H
 #define __ENCODER_H
-#include <sys.h>	 
+#include <sys.h>
 
-#define ENCODER_TIM_PERIOD (u16)(65535)   //²»¿É´óÓÚ65535 ÒòÎªF103µÄ¶¨Ê±Æ÷ÊÇ16Î»µÄ¡£
+#define ENCODER_TIM_PERIOD (u16)(65535)   /* æœ€å¤§è®¡æ•°å€¼ 65535, å› ä¸º F103 çš„å®šæ—¶å™¨ä¸º 16 ä½ */
+
 void Encoder_Init_TIM2(void);
 void Encoder_Init_TIM4(void);
 int Read_Encoder(u8 TIMX);
 void TIM4_IRQHandler(void);
 void TIM2_IRQHandler(void);
-extern int encode_exit_cnt;   //±àÂëÆ÷¼ÆÊıÖĞ¶Ï´ÎÊı
+
+extern int encode_exit_cnt;              /* ç¼–ç å™¨ä¸­æ–­è®¡æ•° */
 extern unsigned long int encode_cnt;
+
 #endif

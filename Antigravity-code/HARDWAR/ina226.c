@@ -1,55 +1,57 @@
 #include "ina226.h"
- 
-//delay
-static void delay_nns(uint16_t D)  //30ÄÉÃëns  ¸ù¾İÊÖ²áÒªÓÃµ½IICµÄHS¸ßËÙÄ£Ê½
+
+/* çº³ç§’çº§å»¶æ—¶ (çº¦ 30ns/æ¬¡, IIC æ ‡å‡†æ¨¡å¼æ— éœ€ HS æ¨¡å¼) */
+static void delay_nns(uint16_t D)
 {
     while(--D);
 }
- 
-void delay_nms(uint16_t ms)  //ºÁÃë
+
+/* æ¯«ç§’çº§å»¶æ—¶ */
+void delay_nms(uint16_t ms)
 {
     uint16_t i;
-    uint32_t M = 0;//720W
+    uint32_t M = 0;
     for(i = 0;i < ms; i++)
     for(M=12000;M > 0;M--);
 }
- 
-void delay_nus(uint16_t us)//Î¢Ãë
+
+/* å¾®ç§’çº§å»¶æ—¶ */
+void delay_nus(uint16_t us)
 {
     uint16_t i;
-    uint16_t M = 0;//720W
+    uint16_t M = 0;
     for(i = 0;i < us; i++)
     for(M=72;M > 0;M--);
 }
- 
-//IIC
- 
-/****************IIC***************************/
+
+/**************** IIC åˆå§‹åŒ– ***************************/
 void INA226_IIC_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
-    RCC_APB2PeriphClockCmd(INA_SCL_RCC|INA_SDA_RCC, ENABLE);	/* ´ò¿ªGPIOÊ±ÖÓ */
+    RCC_APB2PeriphClockCmd(INA_SCL_RCC|INA_SDA_RCC, ENABLE);	/* å¼€å¯ GPIO æ—¶é’Ÿ */
     
     GPIO_InitStructure.GPIO_Pin=INA_SCL_PIN;
 		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;  
-		//	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;  //ĞèÒª°ÑSCL,SDA ÉÏÀ­10k µ½VCC 
+		//	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;  /* å¼€æ¼æ¨¡å¼éœ€å¤–æ¥ SCL,SDA 10k ä¸Šæ‹‰è‡³ VCC */
     GPIO_Init(INA_SCL_GPIO_PORT, &GPIO_InitStructure);
 	
 	  GPIO_InitStructure.GPIO_Pin=INA_SDA_PIN;
 		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;  
-		//	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;  //ĞèÒª°ÑSCL,SDA ÉÏÀ­10k µ½VCC 
+		//	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;  /* å¼€æ¼æ¨¡å¼éœ€å¤–æ¥ SCL,SDA 10k ä¸Šæ‹‰è‡³ VCC */
     GPIO_Init(INA_SDA_GPIO_PORT, &GPIO_InitStructure);
     
     INA_SCL=1;
     INA_SDA=1;  
     delay_nms(5);
 }
- 
- 
+
 /**********************IIC_END*************************/
- 
+
+/**
+ * @brief INA226 åˆå§‹åŒ– (åœ°å€ 0x80, A0=GND, A1=GND)
+ */
 void INA226_Init(void)
 {
     uint16_t Cal;
@@ -71,46 +73,51 @@ void INA226_Init(void)
 
     INA226_SendData(WRITE_ADDR, 0x05, Cal);
 }
- 
+
+/**
+ * @brief INA226 åˆå§‹åŒ– (åœ°å€ 0x8A, A0=VCC, A1=VCC)
+ */
 void INA226_Init1(void)
 {
 		uint16_t Cal ;
     INA226_IIC_Init();
     delay_nms(10);
  
-	  INA226_SendData(WRITE_ADDR1,0x00,0x4807);// ÅäÖÃ²ÎÊı£ºÆ½¾ùÖµ128£¬×ÜÏßµçÑ¹×ª»»Ê±¼ä0.14ms£¬·ÖÁ÷µçÑ¹×ª»»Ê±¼ä0.14ms£¬Á¬Ğø²âÁ¿Ä£Ê½
-	 // ¼ÆËãĞ£×¼Öµ 
+	  INA226_SendData(WRITE_ADDR1,0x00,0x4807); /* é…ç½®: 128 æ¬¡å¹³å‡, ç”µå‹è½¬æ¢æ—¶é—´ 0.14ms, è¿ç»­æ¨¡å¼ */
+	 /* æ ¡å‡†å€¼è®¡ç®— */
 	 Current_LSB=(float)MAX_CURRENT/32768;
-	 //Current_LSB = 0.000305f;		// ¡Ö MAX_CURRENT / 2µÄ15´Î·½
+	 //Current_LSB = 0.000305f;		/* å³ MAX_CURRENT / 2^15 */
    Cal = (uint16_t)(0.00512f / (Current_LSB * SHUNT_RESISTOR) + 0.5f);
    INA226_SendData(WRITE_ADDR1,0x05,Cal);
 	
-	Power_LSB = Current_LSB * 25.0f;		// ¹¦ÂÊĞ£×¼Öµ = µçÁ÷×îĞ¡Öµ * 25±¶
+	Power_LSB = Current_LSB * 25.0f;		/* åŠŸç‡ LSB = ç”µæµ LSB * 25 */
  
 }
- 
     
+/* IIC èµ·å§‹ä¿¡å· */
 void INA226_IIC_Start(void)
 {
     INA_SCL=1;
     INA_SDA=1;
     delay_nns(5);
-     INA_SDA=0;//START:when CLK is high,DATA change form high to low 
+     INA_SDA=0; /* START: å½“ CLK ä¸ºé«˜æ—¶, SDA ä»é«˜å˜ä½ */
     delay_nns(5);
-    INA_SCL=0;//Ç¯×¡I2C×ÜÏß£¬×¼±¸·¢ËÍ»ò½ÓÊÕÊı¾İ 
+    INA_SCL=0; /* é’³ä½ I2C æ€»çº¿, å‡†å¤‡å‘é€æˆ–æ¥æ”¶ */
     delay_nns(5);
 }    
- 
+
+/* IIC åœæ­¢ä¿¡å· */
 void INA226_IIC_Stop(void)
 {
-    INA_SDA=0;//STOP:when CLK is high DATA change form low to high
+    INA_SDA=0; /* STOP: å½“ CLK ä¸ºé«˜æ—¶, SDA ä»ä½å˜é«˜ */
      delay_nns(5);
     INA_SCL=1; 
      delay_nns(5);
-    INA_SDA=1;//·¢ËÍI2C×ÜÏß½áÊøĞÅºÅ
+    INA_SDA=1; /* å‘é€ I2C æ€»çº¿ç»“æŸä¿¡å· */
     delay_nns(5);                                   
 }
- 
+
+/* IIC åº”ç­”ä¿¡å· */
 void INA226_IIC_Ack(void)
 {
     INA_SDA=0;
@@ -121,18 +128,20 @@ void INA226_IIC_Ack(void)
     delay_nns(5);
     INA_SDA=1;
 }
- 
+
+/* IIC éåº”ç­”ä¿¡å· */
 void INA226_IIC_NAck(void)
 {
     INA_SDA=1;
     delay_nns(5);
     INA_SCL=1;
-delay_nns(5);
+    delay_nns(5);
     INA_SCL=0;;
     delay_nns(5);
     INA_SDA=0;
 }        
- 
+
+/* ç­‰å¾…åº”ç­”ä¿¡å·, è¿”å› 0 æˆåŠŸ, 1 è¶…æ—¶å¤±è´¥ */
 uint8_t INA226_IIC_Wait_Ack(void)
 {
     uint8_t ucErrTime=0;
@@ -151,13 +160,14 @@ uint8_t INA226_IIC_Wait_Ack(void)
             return 1;
         }
     }
-    INA_SCL=0;//Ê±ÖÓÊä³ö0        
+    INA_SCL=0; /* æ—¶é’Ÿè¾“å‡º 0 */
     return 0;  
 }
- 
+
+/* IIC å‘é€ä¸€ä¸ªå­—èŠ‚ */
 void INA226_IIC_Send_Byte(uint8_t txd)
 {  int i;                           
-   INA_SCL=0;;//À­µÍÊ±ÖÓ¿ªÊ¼Êı¾İ´«Êä
+   INA_SCL=0;; /* æ‹‰ä½æ—¶é’Ÿå¼€å§‹æ•°æ®ä¼ è¾“ */
    for( i = 0;i < 8;i++)
     {              
         if(txd&0x80)
@@ -172,7 +182,8 @@ void INA226_IIC_Send_Byte(uint8_t txd)
         delay_nns(5);
     }            
 } 
- 
+
+/* IIC è¯»å–ä¸€ä¸ªå­—èŠ‚, ack=1 å‘é€åº”ç­”, ack=0 å‘é€éåº”ç­” */
 uint8_t INA226_IIC_Read_Byte(unsigned char ack)
 {
       uint8_t TData=0,i;
@@ -194,8 +205,8 @@ uint8_t INA226_IIC_Read_Byte(unsigned char ack)
             INA226_IIC_Ack();
     return TData;
 }
- 
- 
+
+/* å‘æŒ‡å®šå¯„å­˜å™¨å†™å…¥ 16 ä½æ•°æ® */
 void INA226_SendData(uint8_t addr,uint8_t reg,uint16_t data)
 {
     uint8_t temp = 0;
@@ -216,8 +227,8 @@ void INA226_SendData(uint8_t addr,uint8_t reg,uint16_t data)
     
     INA226_IIC_Stop();
 }
- 
- 
+
+/* è®¾ç½®å¯„å­˜å™¨æŒ‡é’ˆ */
 void INA226_SetRegPointer(uint8_t addr,uint8_t reg)
 {
     INA226_IIC_Start();
@@ -230,8 +241,8 @@ void INA226_SetRegPointer(uint8_t addr,uint8_t reg)
  
     INA226_IIC_Stop();
 }
- 
- 
+
+/* ä»æŒ‡å®šåœ°å€è¯»å– 16 ä½æ•°æ® */
 uint16_t INA226_ReadData(uint8_t addr)
 {
     uint16_t temp=0;
@@ -247,43 +258,48 @@ uint16_t INA226_ReadData(uint8_t addr)
     INA226_IIC_Stop();
     return temp;
 }
- 
- 
- 
- 
-// ¶ÁÈ¡µçÁ÷£¨µ¥Î»£ºA£©
+
+/**
+ * @brief è¯»å–ç”µæµ, å•ä½: A
+ */
 float INA226_ReadCurrent_A(uint8_t addr)
 {
   uint16_t raw = INA226_GetShuntCurrent(addr);
-  return raw * Current_LSB;  // ¸ù¾İÊµ¼ÊLSBµ÷Õû
+  return raw * Current_LSB;  /* ä¹˜ä»¥å®é™… LSB å€¼ */
 }
-// ¶ÁÈ¡µçÁ÷£¨µ¥Î»£ºmA£©
+
+/**
+ * @brief è¯»å–ç”µæµ, å•ä½: mA
+ */
 float INA226_ReadCurrent_mA(uint8_t addr)
 {
 	float  Curren;
   uint16_t raw = INA226_GetShuntCurrent(addr);
 	Curren=raw * Current_LSB;
 	Curren*=1000;
-  return Curren;  // ¸ù¾İÊµ¼ÊLSBµ÷Õû
+  return Curren;  /* ä¹˜ä»¥å®é™… LSB å€¼å¹¶è½¬æ¢ä¸º mA */
 }
- 
-// ¶ÁÈ¡¹¦ÂÊ£¨µ¥Î»£ºW£©
+
+/**
+ * @brief è¯»å–åŠŸç‡, å•ä½: W
+ */
 float INA226_ReadPower(uint8_t addr)
 {
     uint16_t raw =  INA226_Get_Power( addr);
-    return raw * Power_LSB;  // 25 * µçÁ÷×îĞ¡Öµ
+    return raw * Power_LSB;  /* 25 * ç”µæµæœ€å°åˆ†è¾¨ç‡ */
 }
- 
+
+/* è¯»å–ç”µæµå¯„å­˜å™¨åŸå§‹å€¼ */
 uint16_t INA226_GetShuntCurrent(uint8_t addr)
 {
     uint16_t temp=0;    
     INA226_SetRegPointer(addr,Current_Reg);
     temp = INA226_ReadData(addr);
-   if(temp&0x8000)    temp = ~(temp - 1);//±£Áô·ûºÅÁô¸ø¶ÁÊıº¯Êı´¦Àí
+   if(temp&0x8000)    temp = ~(temp - 1); /* è´Ÿå€¼å–ç»å¯¹å€¼ */
       return temp;
 }
- 
-//»ñÈ¡ id
+
+/* è¯»å–èŠ¯ç‰‡ ID */
 uint16_t  INA226_Get_ID(uint8_t addr)
 {
     uint16_t temp=0;
@@ -291,8 +307,8 @@ uint16_t  INA226_Get_ID(uint8_t addr)
     temp = INA226_ReadData(addr);
     return (uint16_t)temp;
 }
- 
-//»ñÈ¡Ğ£×¼Öµ
+
+/* è¯»å–æ ¡å‡†å¯„å­˜å™¨å€¼ */
 uint16_t INA226_GET_CAL_REG(uint8_t addr)
 {    
     uint16_t temp=0;
@@ -300,8 +316,8 @@ uint16_t INA226_GET_CAL_REG(uint8_t addr)
     temp = INA226_ReadData(addr);
     return temp;
 }
- 
-//1.25mV/bit
+
+/* è¯»å–æ€»çº¿ç”µå‹, 1.25mV/bit */
 uint16_t INA226_GetVoltage(uint8_t addr)
 {
     uint16_t temp=0;
@@ -309,10 +325,8 @@ uint16_t INA226_GetVoltage(uint8_t addr)
     temp = INA226_ReadData(addr);
     return temp;    
 }
- 
- 
- 
-//2.5uV/bit
+
+/* è¯»å– Shunt ç”µå‹, 2.5uV/bit */
 uint16_t INA226_GetShuntVoltage(uint8_t addr)
 {
 	  uint16_t temp=0;
@@ -321,8 +335,8 @@ uint16_t INA226_GetShuntVoltage(uint8_t addr)
     if(temp&0x8000)    temp = ~(temp - 1);    
     return temp;
 }
- 
-//2.5mW/bit
+
+/* è¯»å–åŠŸç‡å¯„å­˜å™¨åŸå§‹å€¼, 2.5mW/bit */
 uint16_t INA226_Get_Power(uint8_t addr)
 {
     uint16_t temp=0;
@@ -330,4 +344,3 @@ uint16_t INA226_Get_Power(uint8_t addr)
     temp = INA226_ReadData(addr);
     return temp;
 }
-

@@ -1,490 +1,490 @@
-/**
-	************************************************************
-	************************************************************
-	************************************************************
-	*	ÎÄ¼þÃû£º 	sample.c
-	*
-	*	×÷Õß£º 		ÕÅ¼ÌÈð
-	*
-	*	ÈÕÆÚ£º 		2017-06-14
-	*
-	*	°æ±¾£º 		V1.0
-	*
-	*	ËµÃ÷£º 		´ËÎÄ¼þ²»²ÎÓë±àÒë£¬½ö½öÖ»ÊÇSDKÊ¹ÓÃµÄÑÝÊ¾
-	*
-	*	ÐÞ¸Ä¼ÇÂ¼£º	
-	************************************************************
-	************************************************************
-	************************************************************
-**/
-
-
-#include "mqttkit.h"
-
-
-unsigned char dataMem[128];		//È«¾ÖÊý×é·½Ê½
-
-
-//==========================================================
-//	º¯ÊýÃû³Æ£º	OneNet_DevLink
-//
-//	º¯Êý¹¦ÄÜ£º	Óëonenet´´½¨Á¬½Ó
-//
-//	Èë¿Ú²ÎÊý£º	devid£º´´½¨Éè±¸µÄdevid
-//				proid£º²úÆ·ID
-//				auth_key£º´´½¨Éè±¸µÄmasterKey»òapiKey»òÉè±¸¼øÈ¨ÐÅÏ¢
-//
-//	·µ»Ø²ÎÊý£º	ÎÞ
-//
-//	ËµÃ÷£º		ÓëonenetÆ½Ì¨½¨Á¢Á¬½Ó£¬³É¹¦»ò»á±ê¼ÇoneNetInfo.netWorkÍøÂç×´Ì¬±êÖ¾
-//==========================================================
-void OneNet_DevLink(const char* devid, const char *proid, const char* auth_info)
-{
-	
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
-	
-	edpPacket._data = dataMem;				//È«¾ÖÊý×é·½Ê½
-	edpPacket._size = sizeof(dataMem);		//È«¾ÖÊý×é·½Ê½
-	
-//---------------------------------------------²½ÖèÒ»£º×é°ü---------------------------------------------
-	if(MQTT_PacketConnect(proid, auth_info, devid, 256, 0, MQTT_QOS_LEVEL0, NULL, NULL, 0, &mqttPacket) == 0)
-	{
-//---------------------------------------------²½Öè¶þ£º·¢ËÍÊý¾Ý-----------------------------------------
-		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
-
-//---------------------------------------------²½ÖèÈý£ºÅÐ¶Ï·µ»ØÀàÐÍ--------------------------------------
-		if(MQTT_UnPacketRecv(dataPtr) == MQTT_PKT_CONNACK)
-		{
-//---------------------------------------------²½ÖèËÄ£º½âÎö·µ»Ø½á¹û--------------------------------------
-			switch(MQTT_UnPacketConnectAck(dataPtr))
-			{
-				case 0:
-					UsartPrintf(USART_DEBUG, "Tips:	Á¬½Ó³É¹¦\r\n");
-					oneNetInfo.netWork = 1;
-				break;
-				
-				case 1:UsartPrintf(USART_DEBUG, "WARN:	Á¬½ÓÊ§°Ü£ºÐ­Òé´íÎó\r\n");break;
-				case 2:UsartPrintf(USART_DEBUG, "WARN:	Á¬½ÓÊ§°Ü£º·Ç·¨µÄclientid\r\n");break;
-				case 3:UsartPrintf(USART_DEBUG, "WARN:	Á¬½ÓÊ§°Ü£º·þÎñÆ÷Ê§°Ü\r\n");break;
-				case 4:UsartPrintf(USART_DEBUG, "WARN:	Á¬½ÓÊ§°Ü£ºÓÃ»§Ãû»òÃÜÂë´íÎó\r\n");break;
-				case 5:UsartPrintf(USART_DEBUG, "WARN:	Á¬½ÓÊ§°Ü£º·Ç·¨Á´½Ó(±ÈÈçtoken·Ç·¨)\r\n");break;
-				
-				default:UsartPrintf(USART_DEBUG, "ERR:	Á¬½ÓÊ§°Ü£ºÎ´Öª´íÎó\r\n");break;
-			}
-		}
-		
-//---------------------------------------------²½ÖèÎå£ºÉ¾°ü---------------------------------------------
-		MQTT_DeleteBuffer(&mqttPacket);
-	}
-	else
-		UsartPrintf(USART_DEBUG, "WARN:	MQTT_PacketConnect Failed\r\n");
-	
-}
-
-//==========================================================
-//	º¯ÊýÃû³Æ£º	OneNet_DisConnect
-//
-//	º¯Êý¹¦ÄÜ£º	ÓëÆ½Ì¨¶Ï¿ªÁ¬½Ó
-//
-//	Èë¿Ú²ÎÊý£º	ÎÞ
-//
-//	·µ»Ø²ÎÊý£º	0-³É¹¦		1-Ê§°Ü
-//
-//	ËµÃ÷£º		
-//==========================================================
-_Bool OneNet_DisConnect(void)
-{
-
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
-	unsigned char dataMem1[8];				//¾Ö²¿Êý×é·½Ê½
-	
-	edpPacket._data = dataMem;				//¾Ö²¿Êý×é·½Ê½
-	edpPacket._size = sizeof(dataMem);		//¾Ö²¿Êý×é·½Ê½
-	
-//---------------------------------------------²½ÖèÒ»£º×é°ü---------------------------------------------
-	if(MQTT_PacketDisConnect(&mqttPacket) == 0)
-	{
-//---------------------------------------------²½Öè¶þ£º·¢ËÍÊý¾Ý-----------------------------------------
-		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
-		
-//---------------------------------------------²½ÖèÈý£ºÉ¾°ü---------------------------------------------
-		MQTT_DeleteBuffer(&mqttPacket);
-	}
-	
-	return 0;
-
-}
-
-//==========================================================
-//	º¯ÊýÃû³Æ£º	OneNet_SendData
-//
-//	º¯Êý¹¦ÄÜ£º	ÉÏ´«Êý¾Ýµ½Æ½Ì¨
-//
-//	Èë¿Ú²ÎÊý£º	type£º·¢ËÍÊý¾ÝµÄ¸ñÊ½
-//				devid£ºÉè±¸ID
-//				apikey£ºÉè±¸apikey
-//				streamArray£ºÊý¾ÝÁ÷
-//				streamArrayNum£ºÊý¾ÝÁ÷¸öÊý
-//
-//	·µ»Ø²ÎÊý£º	0-³É¹¦		1-Ê§°Ü
-//
-//	ËµÃ÷£º		
-//==========================================================
-_Bool OneNet_SendData(FORMAT_TYPE type, char *devid, char *apikey, DATA_STREAM *streamArray, unsigned short streamArrayCnt)
-{
-	
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
-	
-	_Bool status = 0;
-	short body_len = 0;
-	
-	UsartPrintf(USART_DEBUG, "Tips:	OneNet_SendData-MQTT_TYPE%d\r\n", type);
-	
-//---------------------------------------------²½ÖèÒ»£º²âÁ¿Êý¾ÝÁ÷³¤¶È---------------------------------------------
-	body_len = DSTREAM_GetDataStream_Body_Measure(type, streamArray, streamArrayCnt, 0);
-	if(body_len)
-	{
-//---------------------------------------------²½Öè¶þ£ºÌîÐ´Ð­ÒéÍ·-------------------------------------------------
-		if(MQTT_PacketSaveData(devid, body_len, NULL, (uint8)type, &mqttPacket) == 0)
-		{
-//---------------------------------------------²½ÖèÈý£º×é°ü-------------------------------------------------------
-			body_len = DSTREAM_GetDataStream_Body(type, streamArray, streamArrayCnt, mqttPacket._data, mqttPacket._size, mqttPacket._len);
-			
-			if(body_len)
-			{
-				mqttPacket._len += body_len;
-				UsartPrintf(USART_DEBUG, "Send %d Bytes\r\n", mqttPacket._len);
-//---------------------------------------------²½ÖèËÄ£º·¢ËÍÊý¾Ý---------------------------------------------------
-				NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
-			}
-			else
-				UsartPrintf(USART_DEBUG, "WARN:	DSTREAM_GetDataStream_Body Failed\r\n");
-			
-//---------------------------------------------²½ÖèÎå£ºÉ¾°ü-------------------------------------------------------
-			MQTT_DeleteBuffer(&mqttPacket);
-		}
-		else
-			UsartPrintf(USART_DEBUG, "WARN:	MQTT_NewBuffer Failed\r\n");
-	}
-	else
-		status = 1;
-	
-	return status;
-	
-}
-
-//==========================================================
-//	º¯ÊýÃû³Æ£º	OneNet_HeartBeat
-//
-//	º¯Êý¹¦ÄÜ£º	ÐÄÌø¼ì²â
-//
-//	Èë¿Ú²ÎÊý£º	ÎÞ
-//
-//	·µ»Ø²ÎÊý£º	ÎÞ
-//
-//	ËµÃ÷£º		
-//==========================================================
-void OneNet_HeartBeat(void)
-{
-	
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
-
-	unsigned char sCount = 3;
-	
-//---------------------------------------------²½ÖèÒ»£º×é°ü---------------------------------------------
-	if(MQTT_PacketPing(&mqttPacket))
-		return;
-	
-	while(sCount--)
-	{
-//---------------------------------------------²½Öè¶þ£º·¢ËÍÊý¾Ý-----------------------------------------
-		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
-
-//---------------------------------------------²½ÖèÈý£º½âÎö·µ»ØÊý¾Ý-------------------------------------
-		if(MQTT_UnPacketRecv(dataPtr) == MQTT_PKT_PINGRESP)
-		{
-			UsartPrintf(USART_DEBUG, "Tips:	HeartBeat OK\r\n");
-			
-			break;
-		}
-		else
-		{
-			UsartPrintf(USART_DEBUG, "Check Device\r\n");
-		}
-		
-		RTOS_TimeDly(2);
-	}
-	
-//---------------------------------------------²½ÖèËÄ£ºÉ¾°ü---------------------------------------------
-	MQTT_DeleteBuffer(&mqttPacket);
-
-}
-
-//==========================================================
-//	º¯ÊýÃû³Æ£º	OneNet_Publish
-//
-//	º¯Êý¹¦ÄÜ£º	·¢²¼ÏûÏ¢
-//
-//	Èë¿Ú²ÎÊý£º	topic£º·¢²¼µÄÖ÷Ìâ
-//				msg£ºÏûÏ¢ÄÚÈÝ
-//
-//	·µ»Ø²ÎÊý£º	0-³É¹¦	1-Ê§°Ü
-//
-//	ËµÃ÷£º		
-//==========================================================
-_Bool OneNet_Publish(const char *topic, const char *msg)
-{
-
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
-	
-	UsartPrintf(USART_DEBUG, "Publish Topic: %s, Msg: %s\r\n", topic, msg);
-	
-//---------------------------------------------²½ÖèÒ»£º×é°ü---------------------------------------------
-	if(MQTT_PacketPublish(MQTT_PUBLISH_ID, topic, msg, strlen(msg), MQTT_QOS_LEVEL2, 0, 1, &mqttPacket) == 0)
-	{
-//---------------------------------------------²½Öè¶þ£º·¢ËÍÊý¾Ý-----------------------------------------
-		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
-		
-//---------------------------------------------²½ÖèÈý£ºÉ¾°ü---------------------------------------------
-		MQTT_DeleteBuffer(&mqttPacket);
-	}
-	
-	return 0;
-
-}
-
-//==========================================================
-//	º¯ÊýÃû³Æ£º	OneNet_Subscribe
-//
-//	º¯Êý¹¦ÄÜ£º	¶©ÔÄ
-//
-//	Èë¿Ú²ÎÊý£º	topics£º¶©ÔÄµÄtopic
-//				topic_cnt£ºtopic¸öÊý
-//
-//	·µ»Ø²ÎÊý£º	0-³É¹¦	1-Ê§°Ü
-//
-//	ËµÃ÷£º		
-//==========================================================
-_Bool OneNet_Subscribe(const char *topics[], unsigned char topic_cnt)
-{
-	
-	unsigned char i = 0;
-	
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};							//Ð­Òé°ü
-	
-	for(; i < topic_cnt; i++)
-		UsartPrintf(USART_DEBUG, "Subscribe Topic: %s\r\n", topics[i]);
-	
-//---------------------------------------------²½ÖèÒ»£º×é°ü---------------------------------------------
-	if(MQTT_PacketSubscribe(MQTT_SUBSCRIBE_ID, MQTT_QOS_LEVEL2, topics, topic_cnt, &mqttPacket) == 0)
-	{
-//---------------------------------------------²½Öè¶þ£º·¢ËÍÊý¾Ý-----------------------------------------
-		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);					//ÏòÆ½Ì¨·¢ËÍ¶©ÔÄÇëÇó
-		
-//---------------------------------------------²½ÖèÈý£ºÉ¾°ü---------------------------------------------
-		MQTT_DeleteBuffer(&mqttPacket);											//É¾°ü
-	}
-	
-	return 0;
-
-}
-
-//==========================================================
-//	º¯ÊýÃû³Æ£º	OneNet_UnSubscribe
-//
-//	º¯Êý¹¦ÄÜ£º	È¡Ïû¶©ÔÄ
-//
-//	Èë¿Ú²ÎÊý£º	topics£º¶©ÔÄµÄtopic
-//				topic_cnt£ºtopic¸öÊý
-//
-//	·µ»Ø²ÎÊý£º	0-³É¹¦	1-Ê§°Ü
-//
-//	ËµÃ÷£º		
-//==========================================================
-_Bool OneNet_UnSubscribe(const char *topics[], unsigned char topic_cnt)
-{
-	
-	unsigned char i = 0;
-	
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};							//Ð­Òé°ü
-	
-	for(; i < topic_cnt; i++)
-		UsartPrintf(USART_DEBUG, "UnSubscribe Topic: %s\r\n", topics[i]);
-	
-//---------------------------------------------²½ÖèÒ»£º×é°ü---------------------------------------------
-	if(MQTT_PacketUnSubscribe(MQTT_UNSUBSCRIBE_ID, topics, topic_cnt, &mqttPacket) == 0)
-	{
-//---------------------------------------------²½Öè¶þ£º·¢ËÍÊý¾Ý-----------------------------------------
-		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);					//ÏòÆ½Ì¨·¢ËÍÈ¡Ïû¶©ÔÄÇëÇó
-		
-//---------------------------------------------²½ÖèÈý£ºÉ¾°ü---------------------------------------------
-		MQTT_DeleteBuffer(&mqttPacket);											//É¾°ü
-	}
-	
-	return 0;
-
-}
-
-//==========================================================
-//	º¯ÊýÃû³Æ£º	OneNet_RevPro
-//
-//	º¯Êý¹¦ÄÜ£º	Æ½Ì¨·µ»ØÊý¾Ý¼ì²â
-//
-//	Èë¿Ú²ÎÊý£º	dataPtr£ºÆ½Ì¨·µ»ØµÄÊý¾Ý
-//
-//	·µ»Ø²ÎÊý£º	ÎÞ
-//
-//	ËµÃ÷£º		
-//==========================================================
-void OneNet_RevPro(unsigned char *cmd)
-{
-	
-	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
-	
-	char *req_payload = NULL;
-	char *cmdid_topic = NULL;
-	unsigned char type = 0;
-	unsigned char qos = 0;
-	static unsigned short pkt_id = 0;
-	
-	short result = -1;
-	
-//---------------------------------------------²½ÖèÒ»£º»ñÈ¡·µ»ØÊý¾ÝÀàÐÍ---------------------------------------------
-	type = MQTT_UnPacketRecv(cmd);
-	switch(type)
-	{
-//---------------------------------------------²½Öè¶þ£ºµ÷ÓÃº¯Êý½âÎö-------------------------------------------------
-		case MQTT_PKT_CMD:															//ÃüÁîÏÂ·¢
-			
-			result = MQTT_UnPacketCmd(cmd, &cmdid_topic, &req_payload);				//½â³ötopicºÍÏûÏ¢Ìå
-			if(result == 0)
-			{
-				UsartPrintf(USART_DEBUG, "cmdid: %s, req: %s\r\n", cmdid_topic, req_payload);
-				
-				if(MQTT_PacketCmdResp(cmdid_topic, req_payload, &mqttPacket) == 0)	//ÃüÁî»Ø¸´×é°ü
-				{
-					UsartPrintf(USART_DEBUG, "Tips:	Send CmdResp\r\n");
-					
-					NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);			//»Ø¸´ÃüÁî
-					MQTT_DeleteBuffer(&mqttPacket);									//É¾°ü
-				}
-			}
-		
-		break;
-			
-		case MQTT_PKT_PUBLISH:														//½ÓÊÕµÄPublishÏûÏ¢
-		
-			result = MQTT_UnPacketPublish(cmd, &cmdid_topic, &req_payload, &qos, &pkt_id);
-			if(result == 0)
-			{
-				UsartPrintf(USART_DEBUG, "topic: %s\r\npayload: %s\r\n", cmdid_topic, req_payload);
-				
-				switch(qos)
-				{
-					case 1:															//ÊÕµ½publishµÄqosÎª1£¬Éè±¸ÐèÒª»Ø¸´Ack
-					
-						if(MQTT_PacketPublishAck(pkt_id, &mqttPacket) == 0)
-						{
-							UsartPrintf(USART_DEBUG, "Tips:	Send PublishAck\r\n");
-							NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
-							MQTT_DeleteBuffer(&mqttPacket);
-						}
-					
-					break;
-					
-					case 2:															//ÊÕµ½publishµÄqosÎª2£¬Éè±¸ÏÈ»Ø¸´Rec
-																					//Æ½Ì¨»Ø¸´Rel£¬Éè±¸ÔÙ»Ø¸´Comp
-						if(MQTT_PacketPublishRec(pkt_id, &mqttPacket) == 0)
-						{
-							UsartPrintf(USART_DEBUG, "Tips:	Send PublishRec\r\n");
-							NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
-							MQTT_DeleteBuffer(&mqttPacket);
-						}
-					
-					break;
-					
-					default:
-						break;
-				}
-			}
-		
-		break;
-			
-		case MQTT_PKT_PUBACK:														//·¢ËÍPublishÏûÏ¢£¬Æ½Ì¨»Ø¸´µÄAck
-		
-			if(MQTT_UnPacketPublishAck(cmd) == 0)
-				UsartPrintf(USART_DEBUG, "Tips:	MQTT Publish Send OK\r\n");
-			
-		break;
-			
-		case MQTT_PKT_PUBREC:														//·¢ËÍPublishÏûÏ¢£¬Æ½Ì¨»Ø¸´µÄRec£¬Éè±¸Ðè»Ø¸´RelÏûÏ¢
-		
-			if(MQTT_UnPacketPublishRec(cmd) == 0)
-			{
-				UsartPrintf(USART_DEBUG, "Tips:	Rev PublishRec\r\n");
-				if(MQTT_PacketPublishRel(MQTT_PUBLISH_ID, &mqttPacket) == 0)
-				{
-					UsartPrintf(USART_DEBUG, "Tips:	Send PublishRel\r\n");
-					NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
-					MQTT_DeleteBuffer(&mqttPacket);
-				}
-			}
-		
-		break;
-			
-		case MQTT_PKT_PUBREL:														//ÊÕµ½PublishÏûÏ¢£¬Éè±¸»Ø¸´Recºó£¬Æ½Ì¨»Ø¸´µÄRel£¬Éè±¸ÐèÔÙ»Ø¸´Comp
-			
-			if(MQTT_UnPacketPublishRel(cmd, pkt_id) == 0)
-			{
-				UsartPrintf(USART_DEBUG, "Tips:	Rev PublishRel\r\n");
-				if(MQTT_PacketPublishComp(MQTT_PUBLISH_ID, &mqttPacket) == 0)
-				{
-					UsartPrintf(USART_DEBUG, "Tips:	Send PublishComp\r\n");
-					NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
-					MQTT_DeleteBuffer(&mqttPacket);
-				}
-			}
-		
-		break;
-		
-		case MQTT_PKT_PUBCOMP:														//·¢ËÍPublishÏûÏ¢£¬Æ½Ì¨·µ»ØRec£¬Éè±¸»Ø¸´Rel£¬Æ½Ì¨ÔÙ·µ»ØµÄComp
-		
-			if(MQTT_UnPacketPublishComp(cmd) == 0)
-			{
-				UsartPrintf(USART_DEBUG, "Tips:	Rev PublishComp\r\n");
-			}
-		
-		break;
-			
-		case MQTT_PKT_SUBACK:														//·¢ËÍSubscribeÏûÏ¢µÄAck
-		
-			if(MQTT_UnPacketSubscribe(cmd) == 0)
-				UsartPrintf(USART_DEBUG, "Tips:	MQTT Subscribe OK\r\n");
-			else
-				UsartPrintf(USART_DEBUG, "Tips:	MQTT Subscribe Err\r\n");
-		
-		break;
-			
-		case MQTT_PKT_UNSUBACK:														//·¢ËÍUnSubscribeÏûÏ¢µÄAck
-		
-			if(MQTT_UnPacketUnSubscribe(cmd) == 0)
-				UsartPrintf(USART_DEBUG, "Tips:	MQTT UnSubscribe OK\r\n");
-			else
-				UsartPrintf(USART_DEBUG, "Tips:	MQTT UnSubscribe Err\r\n");
-		
-		break;
-	}
-	
-//---------------------------------------------²½ÖèÈý£ºÃüÁî´¦Àí---------------------------------------------
-	if(req)
-	{
-		
-	}
-//---------------------------------------------²½ÖèËÄ£ºÊÍ·ÅÄÚ´æ---------------------------------------------
-	if(type == MQTT_PKT_CMD || type == MQTT_PKT_PUBLISH)
-	{
-		MQTT_FreeBuffer(cmdid_topic);
-		MQTT_FreeBuffer(req_payload);
-	}
-
-}
+/**
+	************************************************************
+	************************************************************
+	************************************************************
+	*	æ–‡ä»¶åï¼š 	sample.c
+	*
+	*	ä½œè€…ï¼š 		å¼ ç»§ç‘ž
+	*
+	*	æ—¥æœŸï¼š 		2017-06-14
+	*
+	*	ç‰ˆæœ¬ï¼š 		V1.0
+	*
+	*	è¯´æ˜Žï¼š 		æ­¤æ–‡ä»¶ä¸å‚ä¸Žç¼–è¯‘ï¼Œä»…ä»…åªæ˜¯SDKä½¿ç”¨çš„æ¼”ç¤º
+	*
+	*	ä¿®æ”¹è®°å½•ï¼š	
+	************************************************************
+	************************************************************
+	************************************************************
+**/
+
+
+#include "mqttkit.h"
+
+
+unsigned char dataMem[128];		//å…¨å±€æ•°ç»„æ–¹å¼
+
+
+//==========================================================
+//	å‡½æ•°åç§°ï¼š	OneNet_DevLink
+//
+//	å‡½æ•°åŠŸèƒ½ï¼š	ä¸Žonenetåˆ›å»ºè¿žæŽ¥
+//
+//	å…¥å£å‚æ•°ï¼š	devidï¼šåˆ›å»ºè®¾å¤‡çš„devid
+//				proidï¼šäº§å“ID
+//				auth_keyï¼šåˆ›å»ºè®¾å¤‡çš„masterKeyæˆ–apiKeyæˆ–è®¾å¤‡é‰´æƒä¿¡æ¯
+//
+//	è¿”å›žå‚æ•°ï¼š	æ— 
+//
+//	è¯´æ˜Žï¼š		ä¸Žonenetå¹³å°å»ºç«‹è¿žæŽ¥ï¼ŒæˆåŠŸæˆ–ä¼šæ ‡è®°oneNetInfo.netWorkç½‘ç»œçŠ¶æ€æ ‡å¿—
+//==========================================================
+void OneNet_DevLink(const char* devid, const char *proid, const char* auth_info)
+{
+	
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
+	
+	edpPacket._data = dataMem;				//å…¨å±€æ•°ç»„æ–¹å¼
+	edpPacket._size = sizeof(dataMem);		//å…¨å±€æ•°ç»„æ–¹å¼
+	
+//---------------------------------------------æ­¥éª¤ä¸€ï¼šç»„åŒ…---------------------------------------------
+	if(MQTT_PacketConnect(proid, auth_info, devid, 256, 0, MQTT_QOS_LEVEL0, NULL, NULL, 0, &mqttPacket) == 0)
+	{
+//---------------------------------------------æ­¥éª¤äºŒï¼šå‘é€æ•°æ®-----------------------------------------
+		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
+
+//---------------------------------------------æ­¥éª¤ä¸‰ï¼šåˆ¤æ–­è¿”å›žç±»åž‹--------------------------------------
+		if(MQTT_UnPacketRecv(dataPtr) == MQTT_PKT_CONNACK)
+		{
+//---------------------------------------------æ­¥éª¤å››ï¼šè§£æžè¿”å›žç»“æžœ--------------------------------------
+			switch(MQTT_UnPacketConnectAck(dataPtr))
+			{
+				case 0:
+					UsartPrintf(USART_DEBUG, "Tips:	è¿žæŽ¥æˆåŠŸ\r\n");
+					oneNetInfo.netWork = 1;
+				break;
+				
+				case 1:UsartPrintf(USART_DEBUG, "WARN:	è¿žæŽ¥å¤±è´¥ï¼šåè®®é”™è¯¯\r\n");break;
+				case 2:UsartPrintf(USART_DEBUG, "WARN:	è¿žæŽ¥å¤±è´¥ï¼šéžæ³•çš„clientid\r\n");break;
+				case 3:UsartPrintf(USART_DEBUG, "WARN:	è¿žæŽ¥å¤±è´¥ï¼šæœåŠ¡å™¨å¤±è´¥\r\n");break;
+				case 4:UsartPrintf(USART_DEBUG, "WARN:	è¿žæŽ¥å¤±è´¥ï¼šç”¨æˆ·åæˆ–å¯†ç é”™è¯¯\r\n");break;
+				case 5:UsartPrintf(USART_DEBUG, "WARN:	è¿žæŽ¥å¤±è´¥ï¼šéžæ³•é“¾æŽ¥(æ¯”å¦‚tokenéžæ³•)\r\n");break;
+				
+				default:UsartPrintf(USART_DEBUG, "ERR:	è¿žæŽ¥å¤±è´¥ï¼šæœªçŸ¥é”™è¯¯\r\n");break;
+			}
+		}
+		
+//---------------------------------------------æ­¥éª¤äº”ï¼šåˆ åŒ…---------------------------------------------
+		MQTT_DeleteBuffer(&mqttPacket);
+	}
+	else
+		UsartPrintf(USART_DEBUG, "WARN:	MQTT_PacketConnect Failed\r\n");
+	
+}
+
+//==========================================================
+//	å‡½æ•°åç§°ï¼š	OneNet_DisConnect
+//
+//	å‡½æ•°åŠŸèƒ½ï¼š	ä¸Žå¹³å°æ–­å¼€è¿žæŽ¥
+//
+//	å…¥å£å‚æ•°ï¼š	æ— 
+//
+//	è¿”å›žå‚æ•°ï¼š	0-æˆåŠŸ		1-å¤±è´¥
+//
+//	è¯´æ˜Žï¼š		
+//==========================================================
+_Bool OneNet_DisConnect(void)
+{
+
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
+	unsigned char dataMem1[8];				//å±€éƒ¨æ•°ç»„æ–¹å¼
+	
+	edpPacket._data = dataMem;				//å±€éƒ¨æ•°ç»„æ–¹å¼
+	edpPacket._size = sizeof(dataMem);		//å±€éƒ¨æ•°ç»„æ–¹å¼
+	
+//---------------------------------------------æ­¥éª¤ä¸€ï¼šç»„åŒ…---------------------------------------------
+	if(MQTT_PacketDisConnect(&mqttPacket) == 0)
+	{
+//---------------------------------------------æ­¥éª¤äºŒï¼šå‘é€æ•°æ®-----------------------------------------
+		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
+		
+//---------------------------------------------æ­¥éª¤ä¸‰ï¼šåˆ åŒ…---------------------------------------------
+		MQTT_DeleteBuffer(&mqttPacket);
+	}
+	
+	return 0;
+
+}
+
+//==========================================================
+//	å‡½æ•°åç§°ï¼š	OneNet_SendData
+//
+//	å‡½æ•°åŠŸèƒ½ï¼š	ä¸Šä¼ æ•°æ®åˆ°å¹³å°
+//
+//	å…¥å£å‚æ•°ï¼š	typeï¼šå‘é€æ•°æ®çš„æ ¼å¼
+//				devidï¼šè®¾å¤‡ID
+//				apikeyï¼šè®¾å¤‡apikey
+//				streamArrayï¼šæ•°æ®æµ
+//				streamArrayNumï¼šæ•°æ®æµä¸ªæ•°
+//
+//	è¿”å›žå‚æ•°ï¼š	0-æˆåŠŸ		1-å¤±è´¥
+//
+//	è¯´æ˜Žï¼š		
+//==========================================================
+_Bool OneNet_SendData(FORMAT_TYPE type, char *devid, char *apikey, DATA_STREAM *streamArray, unsigned short streamArrayCnt)
+{
+	
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
+	
+	_Bool status = 0;
+	short body_len = 0;
+	
+	UsartPrintf(USART_DEBUG, "Tips:	OneNet_SendData-MQTT_TYPE%d\r\n", type);
+	
+//---------------------------------------------æ­¥éª¤ä¸€ï¼šæµ‹é‡æ•°æ®æµé•¿åº¦---------------------------------------------
+	body_len = DSTREAM_GetDataStream_Body_Measure(type, streamArray, streamArrayCnt, 0);
+	if(body_len)
+	{
+//---------------------------------------------æ­¥éª¤äºŒï¼šå¡«å†™åè®®å¤´-------------------------------------------------
+		if(MQTT_PacketSaveData(devid, body_len, NULL, (uint8)type, &mqttPacket) == 0)
+		{
+//---------------------------------------------æ­¥éª¤ä¸‰ï¼šç»„åŒ…-------------------------------------------------------
+			body_len = DSTREAM_GetDataStream_Body(type, streamArray, streamArrayCnt, mqttPacket._data, mqttPacket._size, mqttPacket._len);
+			
+			if(body_len)
+			{
+				mqttPacket._len += body_len;
+				UsartPrintf(USART_DEBUG, "Send %d Bytes\r\n", mqttPacket._len);
+//---------------------------------------------æ­¥éª¤å››ï¼šå‘é€æ•°æ®---------------------------------------------------
+				NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
+			}
+			else
+				UsartPrintf(USART_DEBUG, "WARN:	DSTREAM_GetDataStream_Body Failed\r\n");
+			
+//---------------------------------------------æ­¥éª¤äº”ï¼šåˆ åŒ…-------------------------------------------------------
+			MQTT_DeleteBuffer(&mqttPacket);
+		}
+		else
+			UsartPrintf(USART_DEBUG, "WARN:	MQTT_NewBuffer Failed\r\n");
+	}
+	else
+		status = 1;
+	
+	return status;
+	
+}
+
+//==========================================================
+//	å‡½æ•°åç§°ï¼š	OneNet_HeartBeat
+//
+//	å‡½æ•°åŠŸèƒ½ï¼š	å¿ƒè·³æ£€æµ‹
+//
+//	å…¥å£å‚æ•°ï¼š	æ— 
+//
+//	è¿”å›žå‚æ•°ï¼š	æ— 
+//
+//	è¯´æ˜Žï¼š		
+//==========================================================
+void OneNet_HeartBeat(void)
+{
+	
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
+
+	unsigned char sCount = 3;
+	
+//---------------------------------------------æ­¥éª¤ä¸€ï¼šç»„åŒ…---------------------------------------------
+	if(MQTT_PacketPing(&mqttPacket))
+		return;
+	
+	while(sCount--)
+	{
+//---------------------------------------------æ­¥éª¤äºŒï¼šå‘é€æ•°æ®-----------------------------------------
+		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
+
+//---------------------------------------------æ­¥éª¤ä¸‰ï¼šè§£æžè¿”å›žæ•°æ®-------------------------------------
+		if(MQTT_UnPacketRecv(dataPtr) == MQTT_PKT_PINGRESP)
+		{
+			UsartPrintf(USART_DEBUG, "Tips:	HeartBeat OK\r\n");
+			
+			break;
+		}
+		else
+		{
+			UsartPrintf(USART_DEBUG, "Check Device\r\n");
+		}
+		
+		RTOS_TimeDly(2);
+	}
+	
+//---------------------------------------------æ­¥éª¤å››ï¼šåˆ åŒ…---------------------------------------------
+	MQTT_DeleteBuffer(&mqttPacket);
+
+}
+
+//==========================================================
+//	å‡½æ•°åç§°ï¼š	OneNet_Publish
+//
+//	å‡½æ•°åŠŸèƒ½ï¼š	å‘å¸ƒæ¶ˆæ¯
+//
+//	å…¥å£å‚æ•°ï¼š	topicï¼šå‘å¸ƒçš„ä¸»é¢˜
+//				msgï¼šæ¶ˆæ¯å†…å®¹
+//
+//	è¿”å›žå‚æ•°ï¼š	0-æˆåŠŸ	1-å¤±è´¥
+//
+//	è¯´æ˜Žï¼š		
+//==========================================================
+_Bool OneNet_Publish(const char *topic, const char *msg)
+{
+
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
+	
+	UsartPrintf(USART_DEBUG, "Publish Topic: %s, Msg: %s\r\n", topic, msg);
+	
+//---------------------------------------------æ­¥éª¤ä¸€ï¼šç»„åŒ…---------------------------------------------
+	if(MQTT_PacketPublish(MQTT_PUBLISH_ID, topic, msg, strlen(msg), MQTT_QOS_LEVEL2, 0, 1, &mqttPacket) == 0)
+	{
+//---------------------------------------------æ­¥éª¤äºŒï¼šå‘é€æ•°æ®-----------------------------------------
+		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
+		
+//---------------------------------------------æ­¥éª¤ä¸‰ï¼šåˆ åŒ…---------------------------------------------
+		MQTT_DeleteBuffer(&mqttPacket);
+	}
+	
+	return 0;
+
+}
+
+//==========================================================
+//	å‡½æ•°åç§°ï¼š	OneNet_Subscribe
+//
+//	å‡½æ•°åŠŸèƒ½ï¼š	è®¢é˜…
+//
+//	å…¥å£å‚æ•°ï¼š	topicsï¼šè®¢é˜…çš„topic
+//				topic_cntï¼štopicä¸ªæ•°
+//
+//	è¿”å›žå‚æ•°ï¼š	0-æˆåŠŸ	1-å¤±è´¥
+//
+//	è¯´æ˜Žï¼š		
+//==========================================================
+_Bool OneNet_Subscribe(const char *topics[], unsigned char topic_cnt)
+{
+	
+	unsigned char i = 0;
+	
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};							//åè®®åŒ…
+	
+	for(; i < topic_cnt; i++)
+		UsartPrintf(USART_DEBUG, "Subscribe Topic: %s\r\n", topics[i]);
+	
+//---------------------------------------------æ­¥éª¤ä¸€ï¼šç»„åŒ…---------------------------------------------
+	if(MQTT_PacketSubscribe(MQTT_SUBSCRIBE_ID, MQTT_QOS_LEVEL2, topics, topic_cnt, &mqttPacket) == 0)
+	{
+//---------------------------------------------æ­¥éª¤äºŒï¼šå‘é€æ•°æ®-----------------------------------------
+		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);					//å‘å¹³å°å‘é€è®¢é˜…è¯·æ±‚
+		
+//---------------------------------------------æ­¥éª¤ä¸‰ï¼šåˆ åŒ…---------------------------------------------
+		MQTT_DeleteBuffer(&mqttPacket);											//åˆ åŒ…
+	}
+	
+	return 0;
+
+}
+
+//==========================================================
+//	å‡½æ•°åç§°ï¼š	OneNet_UnSubscribe
+//
+//	å‡½æ•°åŠŸèƒ½ï¼š	å–æ¶ˆè®¢é˜…
+//
+//	å…¥å£å‚æ•°ï¼š	topicsï¼šè®¢é˜…çš„topic
+//				topic_cntï¼štopicä¸ªæ•°
+//
+//	è¿”å›žå‚æ•°ï¼š	0-æˆåŠŸ	1-å¤±è´¥
+//
+//	è¯´æ˜Žï¼š		
+//==========================================================
+_Bool OneNet_UnSubscribe(const char *topics[], unsigned char topic_cnt)
+{
+	
+	unsigned char i = 0;
+	
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};							//åè®®åŒ…
+	
+	for(; i < topic_cnt; i++)
+		UsartPrintf(USART_DEBUG, "UnSubscribe Topic: %s\r\n", topics[i]);
+	
+//---------------------------------------------æ­¥éª¤ä¸€ï¼šç»„åŒ…---------------------------------------------
+	if(MQTT_PacketUnSubscribe(MQTT_UNSUBSCRIBE_ID, topics, topic_cnt, &mqttPacket) == 0)
+	{
+//---------------------------------------------æ­¥éª¤äºŒï¼šå‘é€æ•°æ®-----------------------------------------
+		NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);					//å‘å¹³å°å‘é€å–æ¶ˆè®¢é˜…è¯·æ±‚
+		
+//---------------------------------------------æ­¥éª¤ä¸‰ï¼šåˆ åŒ…---------------------------------------------
+		MQTT_DeleteBuffer(&mqttPacket);											//åˆ åŒ…
+	}
+	
+	return 0;
+
+}
+
+//==========================================================
+//	å‡½æ•°åç§°ï¼š	OneNet_RevPro
+//
+//	å‡½æ•°åŠŸèƒ½ï¼š	å¹³å°è¿”å›žæ•°æ®æ£€æµ‹
+//
+//	å…¥å£å‚æ•°ï¼š	dataPtrï¼šå¹³å°è¿”å›žçš„æ•°æ®
+//
+//	è¿”å›žå‚æ•°ï¼š	æ— 
+//
+//	è¯´æ˜Žï¼š		
+//==========================================================
+void OneNet_RevPro(unsigned char *cmd)
+{
+	
+	MQTT_PACKET_STRUCTURE mqttPacket = {NULL, 0, 0, 0};
+	
+	char *req_payload = NULL;
+	char *cmdid_topic = NULL;
+	unsigned char type = 0;
+	unsigned char qos = 0;
+	static unsigned short pkt_id = 0;
+	
+	short result = -1;
+	
+//---------------------------------------------æ­¥éª¤ä¸€ï¼šèŽ·å–è¿”å›žæ•°æ®ç±»åž‹---------------------------------------------
+	type = MQTT_UnPacketRecv(cmd);
+	switch(type)
+	{
+//---------------------------------------------æ­¥éª¤äºŒï¼šè°ƒç”¨å‡½æ•°è§£æž-------------------------------------------------
+		case MQTT_PKT_CMD:															//å‘½ä»¤ä¸‹å‘
+			
+			result = MQTT_UnPacketCmd(cmd, &cmdid_topic, &req_payload);				//è§£å‡ºtopicå’Œæ¶ˆæ¯ä½“
+			if(result == 0)
+			{
+				UsartPrintf(USART_DEBUG, "cmdid: %s, req: %s\r\n", cmdid_topic, req_payload);
+				
+				if(MQTT_PacketCmdResp(cmdid_topic, req_payload, &mqttPacket) == 0)	//å‘½ä»¤å›žå¤ç»„åŒ…
+				{
+					UsartPrintf(USART_DEBUG, "Tips:	Send CmdResp\r\n");
+					
+					NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);			//å›žå¤å‘½ä»¤
+					MQTT_DeleteBuffer(&mqttPacket);									//åˆ åŒ…
+				}
+			}
+		
+		break;
+			
+		case MQTT_PKT_PUBLISH:														//æŽ¥æ”¶çš„Publishæ¶ˆæ¯
+		
+			result = MQTT_UnPacketPublish(cmd, &cmdid_topic, &req_payload, &qos, &pkt_id);
+			if(result == 0)
+			{
+				UsartPrintf(USART_DEBUG, "topic: %s\r\npayload: %s\r\n", cmdid_topic, req_payload);
+				
+				switch(qos)
+				{
+					case 1:															//æ”¶åˆ°publishçš„qosä¸º1ï¼Œè®¾å¤‡éœ€è¦å›žå¤Ack
+					
+						if(MQTT_PacketPublishAck(pkt_id, &mqttPacket) == 0)
+						{
+							UsartPrintf(USART_DEBUG, "Tips:	Send PublishAck\r\n");
+							NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
+							MQTT_DeleteBuffer(&mqttPacket);
+						}
+					
+					break;
+					
+					case 2:															//æ”¶åˆ°publishçš„qosä¸º2ï¼Œè®¾å¤‡å…ˆå›žå¤Rec
+																					//å¹³å°å›žå¤Relï¼Œè®¾å¤‡å†å›žå¤Comp
+						if(MQTT_PacketPublishRec(pkt_id, &mqttPacket) == 0)
+						{
+							UsartPrintf(USART_DEBUG, "Tips:	Send PublishRec\r\n");
+							NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
+							MQTT_DeleteBuffer(&mqttPacket);
+						}
+					
+					break;
+					
+					default:
+						break;
+				}
+			}
+		
+		break;
+			
+		case MQTT_PKT_PUBACK:														//å‘é€Publishæ¶ˆæ¯ï¼Œå¹³å°å›žå¤çš„Ack
+		
+			if(MQTT_UnPacketPublishAck(cmd) == 0)
+				UsartPrintf(USART_DEBUG, "Tips:	MQTT Publish Send OK\r\n");
+			
+		break;
+			
+		case MQTT_PKT_PUBREC:														//å‘é€Publishæ¶ˆæ¯ï¼Œå¹³å°å›žå¤çš„Recï¼Œè®¾å¤‡éœ€å›žå¤Relæ¶ˆæ¯
+		
+			if(MQTT_UnPacketPublishRec(cmd) == 0)
+			{
+				UsartPrintf(USART_DEBUG, "Tips:	Rev PublishRec\r\n");
+				if(MQTT_PacketPublishRel(MQTT_PUBLISH_ID, &mqttPacket) == 0)
+				{
+					UsartPrintf(USART_DEBUG, "Tips:	Send PublishRel\r\n");
+					NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
+					MQTT_DeleteBuffer(&mqttPacket);
+				}
+			}
+		
+		break;
+			
+		case MQTT_PKT_PUBREL:														//æ”¶åˆ°Publishæ¶ˆæ¯ï¼Œè®¾å¤‡å›žå¤RecåŽï¼Œå¹³å°å›žå¤çš„Relï¼Œè®¾å¤‡éœ€å†å›žå¤Comp
+			
+			if(MQTT_UnPacketPublishRel(cmd, pkt_id) == 0)
+			{
+				UsartPrintf(USART_DEBUG, "Tips:	Rev PublishRel\r\n");
+				if(MQTT_PacketPublishComp(MQTT_PUBLISH_ID, &mqttPacket) == 0)
+				{
+					UsartPrintf(USART_DEBUG, "Tips:	Send PublishComp\r\n");
+					NET_DEVICE_SendData(mqttPacket._data, mqttPacket._len);
+					MQTT_DeleteBuffer(&mqttPacket);
+				}
+			}
+		
+		break;
+		
+		case MQTT_PKT_PUBCOMP:														//å‘é€Publishæ¶ˆæ¯ï¼Œå¹³å°è¿”å›žRecï¼Œè®¾å¤‡å›žå¤Relï¼Œå¹³å°å†è¿”å›žçš„Comp
+		
+			if(MQTT_UnPacketPublishComp(cmd) == 0)
+			{
+				UsartPrintf(USART_DEBUG, "Tips:	Rev PublishComp\r\n");
+			}
+		
+		break;
+			
+		case MQTT_PKT_SUBACK:														//å‘é€Subscribeæ¶ˆæ¯çš„Ack
+		
+			if(MQTT_UnPacketSubscribe(cmd) == 0)
+				UsartPrintf(USART_DEBUG, "Tips:	MQTT Subscribe OK\r\n");
+			else
+				UsartPrintf(USART_DEBUG, "Tips:	MQTT Subscribe Err\r\n");
+		
+		break;
+			
+		case MQTT_PKT_UNSUBACK:														//å‘é€UnSubscribeæ¶ˆæ¯çš„Ack
+		
+			if(MQTT_UnPacketUnSubscribe(cmd) == 0)
+				UsartPrintf(USART_DEBUG, "Tips:	MQTT UnSubscribe OK\r\n");
+			else
+				UsartPrintf(USART_DEBUG, "Tips:	MQTT UnSubscribe Err\r\n");
+		
+		break;
+	}
+	
+//---------------------------------------------æ­¥éª¤ä¸‰ï¼šå‘½ä»¤å¤„ç†---------------------------------------------
+	if(req)
+	{
+		
+	}
+//---------------------------------------------æ­¥éª¤å››ï¼šé‡Šæ”¾å†…å­˜---------------------------------------------
+	if(type == MQTT_PKT_CMD || type == MQTT_PKT_PUBLISH)
+	{
+		MQTT_FreeBuffer(cmdid_topic);
+		MQTT_FreeBuffer(req_payload);
+	}
+
+}
